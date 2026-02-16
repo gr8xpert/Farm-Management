@@ -1,0 +1,413 @@
+import { useState, useEffect } from 'react'
+import { Plus, Search } from 'lucide-react'
+import toast from 'react-hot-toast'
+import api from '../services/api'
+import DataTable from '../components/Common/DataTable'
+import FormModal from '../components/Common/FormModal'
+import DeleteConfirm from '../components/Common/DeleteConfirm'
+
+const columns = [
+  { key: 'payment_id', label: 'ID' },
+  { key: 'payment_date', label: 'Date', render: (val) => val ? new Date(val).toLocaleDateString() : '-' },
+  { key: 'payment_type', label: 'Type', render: (val) => (
+    <span
+      className={`px-2 py-1 text-xs font-medium ${
+        val === 'PAYMENT' ? 'bg-red-100 text-red-700' :
+        val === 'RECEIPT' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+      }`}
+      style={{ borderRadius: '3px' }}
+    >{val}</span>
+  )},
+  { key: 'payment_amount', label: 'Amount', render: (val) => `€${parseFloat(val).toFixed(2)}` },
+  { key: 'payment_mode', label: 'Mode', render: (val) => val?.replace('_', ' ') || '-' },
+  { key: 'bank', label: 'Bank', render: (val) => val?.bank_name || '-' },
+  { key: 'supplier', label: 'Supplier', render: (val) => val?.supplier_name || '-' },
+  { key: 'customer', label: 'Customer', render: (val) => val?.customer_name || '-' },
+  { key: 'purchase', label: 'PO #', render: (val) => val ? `#${val.po_no}` : '-' },
+  { key: 'sale', label: 'Sale #', render: (val) => val ? `#${val.sale_id}` : '-' },
+  { key: 'cheque_no', label: 'Cheque No' },
+  { key: 'remarks', label: 'Remarks' },
+]
+
+const initialFormData = {
+  payment_amount: '',
+  payment_mode: 'CASH',
+  payment_type: 'PAYMENT',
+  bank_id: '',
+  supplier_id: '',
+  customer_id: '',
+  po_no: '',
+  sale_id: '',
+  cheque_no: '',
+  cheque_date: '',
+  remarks: ''
+}
+
+export default function Payments() {
+  const [payments, setPayments] = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [formData, setFormData] = useState(initialFormData)
+  const [editingId, setEditingId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingItem, setDeletingItem] = useState(null)
+
+  // Dropdown data
+  const [banks, setBanks] = useState([])
+  const [suppliers, setSuppliers] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [purchases, setPurchases] = useState([])
+  const [sales, setSales] = useState([])
+
+  useEffect(() => {
+    fetchPayments()
+    fetchDropdownData()
+  }, [])
+
+  const fetchPayments = async (page = 1) => {
+    setLoading(true)
+    try {
+      const response = await api.get('/payments', { params: { page, limit: 10 } })
+      setPayments(response.data.data)
+      setPagination(response.data.pagination)
+    } catch (error) {
+      toast.error('Failed to fetch payments')
+    } finally { setLoading(false) }
+  }
+
+  const fetchDropdownData = async () => {
+    try {
+      const [banksRes, suppliersRes, customersRes, purchasesRes, salesRes] = await Promise.all([
+        api.get('/banks', { params: { limit: 100 } }),
+        api.get('/suppliers', { params: { limit: 100 } }),
+        api.get('/customers', { params: { limit: 100 } }),
+        api.get('/purchases', { params: { limit: 100 } }),
+        api.get('/sales', { params: { limit: 100 } })
+      ])
+      setBanks(banksRes.data.data.filter(b => b.active))
+      setSuppliers(suppliersRes.data.data)
+      setCustomers(customersRes.data.data)
+      setPurchases(purchasesRes.data.data)
+      setSales(salesRes.data.data)
+    } catch (error) {
+      console.error('Failed to fetch dropdown data')
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!formData.payment_amount || parseFloat(formData.payment_amount) <= 0) {
+      toast.error('Valid payment amount is required')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const payload = {
+        ...formData,
+        bank_id: formData.bank_id || null,
+        supplier_id: formData.supplier_id || null,
+        customer_id: formData.customer_id || null,
+        po_no: formData.po_no || null,
+        sale_id: formData.sale_id || null
+      }
+
+      if (editingId) {
+        await api.put(`/payments/${editingId}`, payload)
+        toast.success('Payment updated')
+      } else {
+        await api.post('/payments', payload)
+        toast.success('Payment created')
+      }
+      setModalOpen(false)
+      setFormData(initialFormData)
+      setEditingId(null)
+      fetchPayments()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Operation failed')
+    } finally { setSubmitting(false) }
+  }
+
+  const handleEdit = (payment) => {
+    setFormData({
+      payment_amount: payment.payment_amount,
+      payment_mode: payment.payment_mode,
+      payment_type: payment.payment_type,
+      bank_id: payment.bank_id || '',
+      supplier_id: payment.supplier_id || '',
+      customer_id: payment.customer_id || '',
+      po_no: payment.po_no || '',
+      sale_id: payment.sale_id || '',
+      cheque_no: payment.cheque_no || '',
+      cheque_date: payment.cheque_date ? payment.cheque_date.split('T')[0] : '',
+      remarks: payment.remarks || ''
+    })
+    setEditingId(payment.payment_id)
+    setModalOpen(true)
+  }
+
+  const handleDelete = async () => {
+    setSubmitting(true)
+    try {
+      await api.delete(`/payments/${deletingItem.payment_id}`)
+      toast.success('Payment deleted')
+      setDeleteOpen(false)
+      setDeletingItem(null)
+      fetchPayments()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Delete failed')
+    } finally { setSubmitting(false) }
+  }
+
+  const handleTypeChange = (type) => {
+    setFormData({
+      ...formData,
+      payment_type: type,
+      // Clear opposite party when switching types
+      supplier_id: type === 'RECEIPT' ? '' : formData.supplier_id,
+      customer_id: type === 'PAYMENT' ? '' : formData.customer_id,
+      po_no: type === 'RECEIPT' ? '' : formData.po_no,
+      sale_id: type === 'PAYMENT' ? '' : formData.sale_id
+    })
+  }
+
+  // Filter purchases by selected supplier
+  const filteredPurchases = formData.supplier_id
+    ? purchases.filter(p => p.supplier_id === parseInt(formData.supplier_id))
+    : purchases
+
+  // Filter sales by selected customer
+  const filteredSales = formData.customer_id
+    ? sales.filter(s => s.customer_id === parseInt(formData.customer_id))
+    : sales
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-800">Payments</h1>
+        <button
+          onClick={() => { setFormData(initialFormData); setEditingId(null); setModalOpen(true) }}
+          className="btn-primary text-sm flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Payment
+        </button>
+      </div>
+
+      <div className="card">
+        <DataTable
+          columns={columns}
+          data={payments}
+          pagination={pagination}
+          onPageChange={fetchPayments}
+          onEdit={handleEdit}
+          onDelete={(item) => { setDeletingItem(item); setDeleteOpen(true) }}
+          loading={loading}
+        />
+      </div>
+
+      <FormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? 'Edit Payment' : 'Add Payment'}
+        onSubmit={handleSubmit}
+        loading={submitting}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Payment Type Selection */}
+          <div>
+            <label className="form-label">Payment Type *</label>
+            <div className="flex w-full mt-1" style={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('PAYMENT')}
+                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  formData.payment_type === 'PAYMENT'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Payment (To Supplier)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('RECEIPT')}
+                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors border-l border-r border-gray-200 ${
+                  formData.payment_type === 'RECEIPT'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Receipt (From Customer)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('REFUND')}
+                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  formData.payment_type === 'REFUND'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Refund
+              </button>
+            </div>
+          </div>
+
+          <div className="form-grid-3">
+            <div>
+              <label className="form-label">Amount *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.payment_amount}
+                onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                className="input-field"
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label">Mode *</label>
+              <select
+                value={formData.payment_mode}
+                onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })}
+                className="input-field"
+              >
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CARD">Card</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Bank</label>
+              <select
+                value={formData.bank_id}
+                onChange={(e) => setFormData({ ...formData, bank_id: e.target.value })}
+                className="input-field"
+              >
+                <option value="">Select Bank</option>
+                {banks.map(bank => (
+                  <option key={bank.bank_id} value={bank.bank_id}>{bank.bank_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Supplier/PO fields - shown for PAYMENT type */}
+          {formData.payment_type === 'PAYMENT' && (
+            <div className="form-grid-2">
+              <div>
+                <label className="form-label">Supplier</label>
+                <select
+                  value={formData.supplier_id}
+                  onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value, po_no: '' })}
+                  className="input-field"
+                >
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.supplier_id} value={s.supplier_id}>{s.supplier_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Purchase Order</label>
+                <select
+                  value={formData.po_no}
+                  onChange={(e) => setFormData({ ...formData, po_no: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select PO</option>
+                  {filteredPurchases.map(p => (
+                    <option key={p.po_no} value={p.po_no}>
+                      PO #{p.po_no} - €{parseFloat(p.total_amount || 0).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Customer/Sale fields - shown for RECEIPT type */}
+          {formData.payment_type === 'RECEIPT' && (
+            <div className="form-grid-2">
+              <div>
+                <label className="form-label">Customer</label>
+                <select
+                  value={formData.customer_id}
+                  onChange={(e) => setFormData({ ...formData, customer_id: e.target.value, sale_id: '' })}
+                  className="input-field"
+                >
+                  <option value="">Select Customer</option>
+                  {customers.map(c => (
+                    <option key={c.customer_id} value={c.customer_id}>{c.customer_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Sale Invoice</label>
+                <select
+                  value={formData.sale_id}
+                  onChange={(e) => setFormData({ ...formData, sale_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Select Sale</option>
+                  {filteredSales.map(s => (
+                    <option key={s.sale_id} value={s.sale_id}>
+                      Sale #{s.sale_id} - €{parseFloat(s.total_amount || 0).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Cheque fields - shown for CHEQUE or BANK_TRANSFER mode */}
+          {(formData.payment_mode === 'CHEQUE' || formData.payment_mode === 'BANK_TRANSFER') && (
+            <div className="form-grid-2">
+              <div>
+                <label className="form-label">Cheque No</label>
+                <input
+                  type="text"
+                  value={formData.cheque_no}
+                  onChange={(e) => setFormData({ ...formData, cheque_no: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Cheque Date</label>
+                <input
+                  type="date"
+                  value={formData.cheque_date}
+                  onChange={(e) => setFormData({ ...formData, cheque_date: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="form-label">Remarks</label>
+            <textarea
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+              className="input-field"
+              rows={2}
+            />
+          </div>
+        </div>
+      </FormModal>
+
+      <DeleteConfirm
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Payment"
+        message="Delete this payment? This cannot be undone."
+        loading={submitting}
+      />
+    </div>
+  )
+}

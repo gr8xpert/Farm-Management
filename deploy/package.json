@@ -1,0 +1,24 @@
+{
+  "name": "farm-management-server",
+  "version": "1.0.0",
+  "description": "Farm Management System API Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "prisma:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:push:force": "prisma db push --accept-data-loss",
+    "db:seed": "node prisma/seed.js",
+    "setup": "prisma generate && prisma db push && node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^5.10.0"
+  }
+}
