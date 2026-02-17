@@ -53,7 +53,7 @@ export default function Sidebar({ open, onClose }) {
           <div className="w-8 h-8 bg-green-600 flex items-center justify-center" style={{ borderRadius: '4px' }}>
             <span className="text-white font-bold text-sm">KC</span>
           </div>
-          <span className="font-semibold text-gray-800 text-sm">Kun Cattle Farm</span>
+          <span className="font-semibold text-gray-800 text-sm">Kun Farm</span>
         </div>
         <button
           onClick={onClose}

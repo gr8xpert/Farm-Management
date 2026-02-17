@@ -49,7 +49,7 @@ export default function LoginPage() {
             >
               <span className="text-white font-bold text-xl">KC</span>
             </div>
-            <h1 className="text-xl font-semibold text-gray-800">Kun Cattle Farm</h1>
+            <h1 className="text-xl font-semibold text-gray-800">Kun Farm</h1>
             <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
           </div>
 

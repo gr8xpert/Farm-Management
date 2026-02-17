@@ -1,4 +1,4 @@
-# Kun Cattle Farm - Management System
+# Kun Farm - Management System
 
 A comprehensive farm management system for managing suppliers, customers, inventory, employees, purchases, sales, payments, and returns.
 
@@ -203,4 +203,4 @@ Private - All rights reserved
 
 ## Author
 
-Developed for Kun Cattle Farm
+Developed for Kun Farm
