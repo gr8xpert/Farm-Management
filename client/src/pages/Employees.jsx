@@ -16,9 +16,10 @@ const columns = [
   { key: 'phone_no', label: 'Phone' },
   { key: 'mobile_no', label: 'Mobile' },
   { key: 'city', label: 'City' },
-  { key: 'state', label: 'State' },
+  { key: 'state', label: 'Province' },
   { key: 'address', label: 'Address' },
   { key: 'ref_name', label: 'Reference' },
+  { key: 'monthly_salary', label: 'Monthly Salary', render: (val) => val ? `Rs.${parseFloat(val).toLocaleString('en-PK', { minimumFractionDigits: 2 })}` : '-' },
   { key: 'status', label: 'Status', render: (val) => (
     <span
       className={`px-2 py-1 text-xs font-medium ${val === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
@@ -31,7 +32,8 @@ const columns = [
 
 const initialFormData = {
   employee_name: '', father_name: '', dob: '', doj: '', nic_no: '',
-  city: '', state: '', address: '', phone_no: '', mobile_no: '', status: 'active', ref_name: ''
+  city: '', state: '', address: '', phone_no: '', mobile_no: '', status: 'active', ref_name: '',
+  monthly_salary: ''
 }
 
 export default function Employees() {
@@ -82,7 +84,8 @@ export default function Employees() {
       dob: emp.dob ? emp.dob.split('T')[0] : '', doj: emp.doj ? emp.doj.split('T')[0] : '',
       nic_no: emp.nic_no || '', city: emp.city || '', state: emp.state || '',
       address: emp.address || '', phone_no: emp.phone_no || '', mobile_no: emp.mobile_no || '',
-      status: emp.status || 'active', ref_name: emp.ref_name || ''
+      status: emp.status || 'active', ref_name: emp.ref_name || '',
+      monthly_salary: emp.monthly_salary || ''
     })
     setEditingId(emp.employee_no); setModalOpen(true)
   }
@@ -229,13 +232,19 @@ export default function Employees() {
               />
             </div>
             <div>
-              <label className="form-label">State</label>
-              <input
-                type="text"
+              <label className="form-label">Province</label>
+              <select
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 className="input-field"
-              />
+              >
+                <option value="">Select Province</option>
+                <option value="Sindh">Sindh</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Balochistan">Balochistan</option>
+                <option value="KPK">KPK</option>
+                <option value="Gilgit">Gilgit</option>
+              </select>
             </div>
           </div>
 
@@ -249,7 +258,19 @@ export default function Employees() {
             />
           </div>
 
-          <div className="form-grid-2">
+          <div className="form-grid-3">
+            <div>
+              <label className="form-label">Monthly Salary</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.monthly_salary}
+                onChange={(e) => setFormData({ ...formData, monthly_salary: e.target.value })}
+                className="input-field"
+                placeholder="0.00"
+              />
+            </div>
             <div>
               <label className="form-label">Reference Name</label>
               <input

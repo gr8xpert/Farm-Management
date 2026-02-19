@@ -57,11 +57,7 @@ export default function Dashboard() {
   }
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0
-    }).format(value)
+    return `Rs.${Number(value).toLocaleString('en-PK')}`
   }
 
   const formatDate = (dateString) => {

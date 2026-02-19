@@ -13,7 +13,7 @@ const columns = [
   { key: 'phone_number', label: 'Phone' },
   { key: 'email_address', label: 'Email' },
   { key: 'city', label: 'City' },
-  { key: 'state', label: 'State' },
+  { key: 'state', label: 'Province' },
   { key: 'country', label: 'Country' },
   { key: 'address', label: 'Address' },
   { key: 'webpage_address', label: 'Website' },
@@ -230,13 +230,19 @@ export default function Suppliers() {
               />
             </div>
             <div>
-              <label className="form-label">State</label>
-              <input
-                type="text"
+              <label className="form-label">Province</label>
+              <select
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 className="input-field"
-              />
+              >
+                <option value="">Select Province</option>
+                <option value="Sindh">Sindh</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Balochistan">Balochistan</option>
+                <option value="KPK">KPK</option>
+                <option value="Gilgit">Gilgit</option>
+              </select>
             </div>
             <div>
               <label className="form-label">City</label>

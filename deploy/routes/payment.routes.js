@@ -27,7 +27,8 @@ router.get('/', async (req, res) => {
           supplier: true,
           customer: true,
           purchase: true,
-          sale: true
+          sale: true,
+          employee: true
         }
       }),
       req.prisma.payment.count({ where })
@@ -49,6 +50,58 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get salary balance for an employee for a given month
+router.get('/salary-balance/:employee_no/:year/:month', async (req, res) => {
+  try {
+    const { employee_no, year, month } = req.params;
+    const empNo = parseInt(employee_no);
+    const y = parseInt(year);
+    const m = parseInt(month);
+
+    const employee = await req.prisma.employee.findUnique({
+      where: { employee_no: empNo }
+    });
+
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    const payments = await req.prisma.payment.findMany({
+      where: {
+        employee_no: empNo,
+        payment_type: 'SALARY',
+        salary_month: {
+          gte: startDate,
+          lt: endDate
+        }
+      }
+    });
+
+    const advance_paid = payments
+      .filter(p => p.salary_type === 'ADVANCE')
+      .reduce((sum, p) => sum + parseFloat(p.payment_amount), 0);
+
+    const regular_paid = payments
+      .filter(p => p.salary_type === 'REGULAR')
+      .reduce((sum, p) => sum + parseFloat(p.payment_amount), 0);
+
+    const total_paid = advance_paid + regular_paid;
+    const monthly_salary = employee.monthly_salary ? parseFloat(employee.monthly_salary) : 0;
+    const remaining = monthly_salary - total_paid;
+
+    res.json({
+      success: true,
+      data: { monthly_salary, advance_paid, regular_paid, total_paid, remaining }
+    });
+  } catch (error) {
+    console.error('Get salary balance error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch salary balance' });
+  }
+});
+
 // Get single payment with related data
 router.get('/:id', async (req, res) => {
   try {
@@ -59,7 +112,8 @@ router.get('/:id', async (req, res) => {
         supplier: true,
         customer: true,
         purchase: true,
-        sale: true
+        sale: true,
+        employee: true
       }
     });
 
@@ -78,8 +132,8 @@ router.get('/:id', async (req, res) => {
 router.post('/',
   [
     body('payment_amount').isFloat({ min: 0.01 }).withMessage('Payment amount must be greater than 0'),
-    body('payment_mode').isIn(['CASH', 'CHEQUE', 'BANK_TRANSFER', 'CARD']).withMessage('Invalid payment mode'),
-    body('payment_type').isIn(['PAYMENT', 'RECEIPT', 'REFUND']).withMessage('Invalid payment type')
+    body('payment_mode').isIn(['CASH', 'CHEQUE', 'BANK_TRANSFER', 'ONLINE']).withMessage('Invalid payment mode'),
+    body('payment_type').isIn(['PAYMENT', 'RECEIPT', 'REFUND', 'SALARY']).withMessage('Invalid payment type')
   ],
   async (req, res) => {
     try {
@@ -97,6 +151,9 @@ router.post('/',
         customer_id,
         po_no,
         sale_id,
+        employee_no,
+        salary_month,
+        salary_type,
         cheque_no,
         cheque_date,
         remarks
@@ -112,6 +169,9 @@ router.post('/',
           customer_id: customer_id ? parseInt(customer_id) : null,
           po_no: po_no ? parseInt(po_no) : null,
           sale_id: sale_id ? parseInt(sale_id) : null,
+          employee_no: employee_no ? parseInt(employee_no) : null,
+          salary_month: salary_month ? new Date(salary_month) : null,
+          salary_type: salary_type || null,
           cheque_no: cheque_no || null,
           cheque_date: cheque_date ? new Date(cheque_date) : null,
           remarks: remarks || null,
@@ -122,7 +182,8 @@ router.post('/',
           supplier: true,
           customer: true,
           purchase: true,
-          sale: true
+          sale: true,
+          employee: true
         }
       });
 
@@ -142,8 +203,8 @@ router.post('/',
 router.put('/:id',
   [
     body('payment_amount').isFloat({ min: 0.01 }).withMessage('Payment amount must be greater than 0'),
-    body('payment_mode').isIn(['CASH', 'CHEQUE', 'BANK_TRANSFER', 'CARD']).withMessage('Invalid payment mode'),
-    body('payment_type').isIn(['PAYMENT', 'RECEIPT', 'REFUND']).withMessage('Invalid payment type')
+    body('payment_mode').isIn(['CASH', 'CHEQUE', 'BANK_TRANSFER', 'ONLINE']).withMessage('Invalid payment mode'),
+    body('payment_type').isIn(['PAYMENT', 'RECEIPT', 'REFUND', 'SALARY']).withMessage('Invalid payment type')
   ],
   async (req, res) => {
     try {
@@ -161,6 +222,9 @@ router.put('/:id',
         customer_id,
         po_no,
         sale_id,
+        employee_no,
+        salary_month,
+        salary_type,
         cheque_no,
         cheque_date,
         remarks
@@ -177,6 +241,9 @@ router.put('/:id',
           customer_id: customer_id ? parseInt(customer_id) : null,
           po_no: po_no ? parseInt(po_no) : null,
           sale_id: sale_id ? parseInt(sale_id) : null,
+          employee_no: employee_no ? parseInt(employee_no) : null,
+          salary_month: salary_month ? new Date(salary_month) : null,
+          salary_type: salary_type || null,
           cheque_no: cheque_no || null,
           cheque_date: cheque_date ? new Date(cheque_date) : null,
           remarks: remarks || null
@@ -186,7 +253,8 @@ router.put('/:id',
           supplier: true,
           customer: true,
           purchase: true,
-          sale: true
+          sale: true,
+          employee: true
         }
       });
 

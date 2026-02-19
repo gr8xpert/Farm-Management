@@ -124,20 +124,23 @@ model Bank {
 
 // Employees
 model Employee {
-  employee_no   Int       @id @default(autoincrement())
-  employee_name String    @db.VarChar(100)
-  father_name   String?   @db.VarChar(100)
-  dob           DateTime?
-  doj           DateTime?
-  nic_no        String?   @db.VarChar(20)
-  city          String?   @db.VarChar(50)
-  state         String?   @db.VarChar(50)
-  address       String?   @db.VarChar(255)
-  phone_no      String?   @db.VarChar(20)
-  mobile_no     String?   @db.VarChar(20)
-  status        String?   @db.VarChar(20) @default("active")
-  ref_name      String?   @db.VarChar(100)
-  active        Boolean   @default(true)
+  employee_no    Int       @id @default(autoincrement())
+  employee_name  String    @db.VarChar(100)
+  father_name    String?   @db.VarChar(100)
+  dob            DateTime?
+  doj            DateTime?
+  nic_no         String?   @db.VarChar(20)
+  city           String?   @db.VarChar(50)
+  state          String?   @db.VarChar(50)
+  address        String?   @db.VarChar(255)
+  phone_no       String?   @db.VarChar(20)
+  mobile_no      String?   @db.VarChar(20)
+  status         String?   @db.VarChar(20) @default("active")
+  ref_name       String?   @db.VarChar(100)
+  monthly_salary Decimal?  @db.Decimal(12, 2)
+  active         Boolean   @default(true)
+
+  payments       Payment[]
 
   @@map("employees")
 }
@@ -172,8 +175,9 @@ model PurchaseDetail {
   qty       Decimal   @db.Decimal(10, 2)
   price     Decimal   @db.Decimal(10, 2)
   age       Int?
-  weight    Decimal?  @db.Decimal(10, 2)
-  remarks   String?   @db.VarChar(255)
+  weight      Decimal?  @db.Decimal(10, 2)
+  weight_unit String?   @db.VarChar(20)
+  remarks     String?   @db.VarChar(255)
 
   @@map("purchase_detail")
 }
@@ -208,8 +212,9 @@ model SaleDetail {
   qty       Decimal   @db.Decimal(10, 2)
   price     Decimal   @db.Decimal(10, 2)
   age       Int?
-  weight    Decimal?  @db.Decimal(10, 2)
-  remarks   String?   @db.VarChar(255)
+  weight      Decimal?  @db.Decimal(10, 2)
+  weight_unit String?   @db.VarChar(20)
+  remarks     String?   @db.VarChar(255)
 
   @@map("sale_detail")
 }
@@ -242,6 +247,12 @@ model Payment {
   sale_id         Int?
   sale            SaleMaster? @relation(fields: [sale_id], references: [sale_id])
 
+  // Employee relation (for salary payments)
+  employee_no     Int?
+  employee        Employee? @relation(fields: [employee_no], references: [employee_no])
+  salary_month    DateTime?
+  salary_type     SalaryType?
+
   cheque_no       String?   @db.VarChar(50)
   cheque_date     DateTime?
   remarks         String?   @db.VarChar(255)
@@ -255,13 +266,19 @@ enum PaymentMode {
   CASH
   CHEQUE
   BANK_TRANSFER
-  CARD
+  ONLINE
 }
 
 enum PaymentType {
   PAYMENT
   RECEIPT
   REFUND
+  SALARY
+}
+
+enum SalaryType {
+  ADVANCE
+  REGULAR
 }
 
 // Purchase Return Master
@@ -295,8 +312,9 @@ model PurchaseReturnDetail {
   qty       Decimal   @db.Decimal(10, 2)
   price     Decimal   @db.Decimal(10, 2)
   age       Int?
-  weight    Decimal?  @db.Decimal(10, 2)
-  remarks   String?   @db.VarChar(255)
+  weight      Decimal?  @db.Decimal(10, 2)
+  weight_unit String?   @db.VarChar(20)
+  remarks     String?   @db.VarChar(255)
 
   @@map("purchase_return_detail")
 }
@@ -332,8 +350,9 @@ model SaleReturnDetail {
   qty       Decimal   @db.Decimal(10, 2)
   price     Decimal   @db.Decimal(10, 2)
   age       Int?
-  weight    Decimal?  @db.Decimal(10, 2)
-  remarks   String?   @db.VarChar(255)
+  weight      Decimal?  @db.Decimal(10, 2)
+  weight_unit String?   @db.VarChar(20)
+  remarks     String?   @db.VarChar(255)
 
   @@map("sale_return_detail")
 }

@@ -13,18 +13,21 @@ const columns = [
     <span
       className={`px-2 py-1 text-xs font-medium ${
         val === 'PAYMENT' ? 'bg-red-100 text-red-700' :
-        val === 'RECEIPT' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+        val === 'RECEIPT' ? 'bg-green-100 text-green-700' :
+        val === 'SALARY' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
       }`}
       style={{ borderRadius: '3px' }}
     >{val}</span>
   )},
-  { key: 'payment_amount', label: 'Amount', render: (val) => `€${parseFloat(val).toFixed(2)}` },
+  { key: 'payment_amount', label: 'Amount', render: (val) => `Rs.${parseFloat(val).toLocaleString('en-PK', { minimumFractionDigits: 2 })}` },
   { key: 'payment_mode', label: 'Mode', render: (val) => val?.replace('_', ' ') || '-' },
   { key: 'bank', label: 'Bank', render: (val) => val?.bank_name || '-' },
   { key: 'supplier', label: 'Supplier', render: (val) => val?.supplier_name || '-' },
   { key: 'customer', label: 'Customer', render: (val) => val?.customer_name || '-' },
   { key: 'purchase', label: 'PO #', render: (val) => val ? `#${val.po_no}` : '-' },
   { key: 'sale', label: 'Sale #', render: (val) => val ? `#${val.sale_id}` : '-' },
+  { key: 'employee', label: 'Employee', render: (val) => val?.employee_name || '-' },
+  { key: 'salary_type', label: 'Salary Type', render: (val) => val || '-' },
   { key: 'cheque_no', label: 'Cheque No' },
   { key: 'remarks', label: 'Remarks' },
 ]
@@ -38,6 +41,9 @@ const initialFormData = {
   customer_id: '',
   po_no: '',
   sale_id: '',
+  employee_no: '',
+  salary_month: '',
+  salary_type: 'REGULAR',
   cheque_no: '',
   cheque_date: '',
   remarks: ''
@@ -60,6 +66,8 @@ export default function Payments() {
   const [customers, setCustomers] = useState([])
   const [purchases, setPurchases] = useState([])
   const [sales, setSales] = useState([])
+  const [employees, setEmployees] = useState([])
+  const [salaryBalance, setSalaryBalance] = useState(null)
 
   useEffect(() => {
     fetchPayments()
@@ -79,18 +87,20 @@ export default function Payments() {
 
   const fetchDropdownData = async () => {
     try {
-      const [banksRes, suppliersRes, customersRes, purchasesRes, salesRes] = await Promise.all([
+      const [banksRes, suppliersRes, customersRes, purchasesRes, salesRes, employeesRes] = await Promise.all([
         api.get('/banks', { params: { limit: 100 } }),
         api.get('/suppliers', { params: { limit: 100 } }),
         api.get('/customers', { params: { limit: 100 } }),
         api.get('/purchases', { params: { limit: 100 } }),
-        api.get('/sales', { params: { limit: 100 } })
+        api.get('/sales', { params: { limit: 100 } }),
+        api.get('/employees', { params: { limit: 100 } })
       ])
       setBanks(banksRes.data.data.filter(b => b.active))
       setSuppliers(suppliersRes.data.data)
       setCustomers(customersRes.data.data)
       setPurchases(purchasesRes.data.data)
       setSales(salesRes.data.data)
+      setEmployees(employeesRes.data.data)
     } catch (error) {
       console.error('Failed to fetch dropdown data')
     }
@@ -101,6 +111,16 @@ export default function Payments() {
       toast.error('Valid payment amount is required')
       return
     }
+    if (formData.payment_type === 'SALARY') {
+      if (!formData.employee_no) {
+        toast.error('Please select an employee')
+        return
+      }
+      if (!formData.salary_month) {
+        toast.error('Please select a salary month')
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const payload = {
@@ -109,7 +129,10 @@ export default function Payments() {
         supplier_id: formData.supplier_id || null,
         customer_id: formData.customer_id || null,
         po_no: formData.po_no || null,
-        sale_id: formData.sale_id || null
+        sale_id: formData.sale_id || null,
+        employee_no: formData.employee_no || null,
+        salary_month: formData.salary_month || null,
+        salary_type: formData.payment_type === 'SALARY' ? formData.salary_type : null
       }
 
       if (editingId) {
@@ -138,11 +161,19 @@ export default function Payments() {
       customer_id: payment.customer_id || '',
       po_no: payment.po_no || '',
       sale_id: payment.sale_id || '',
+      employee_no: payment.employee_no || '',
+      salary_month: payment.salary_month ? payment.salary_month.substring(0, 7) : '',
+      salary_type: payment.salary_type || 'REGULAR',
       cheque_no: payment.cheque_no || '',
       cheque_date: payment.cheque_date ? payment.cheque_date.split('T')[0] : '',
       remarks: payment.remarks || ''
     })
     setEditingId(payment.payment_id)
+    setSalaryBalance(null)
+    if (payment.payment_type === 'SALARY' && payment.employee_no && payment.salary_month) {
+      const d = new Date(payment.salary_month)
+      fetchSalaryBalance(payment.employee_no, d.getFullYear(), d.getMonth() + 1)
+    }
     setModalOpen(true)
   }
 
@@ -160,15 +191,51 @@ export default function Payments() {
   }
 
   const handleTypeChange = (type) => {
+    setSalaryBalance(null)
     setFormData({
       ...formData,
       payment_type: type,
       // Clear opposite party when switching types
-      supplier_id: type === 'RECEIPT' ? '' : formData.supplier_id,
-      customer_id: type === 'PAYMENT' ? '' : formData.customer_id,
-      po_no: type === 'RECEIPT' ? '' : formData.po_no,
-      sale_id: type === 'PAYMENT' ? '' : formData.sale_id
+      supplier_id: type === 'RECEIPT' || type === 'SALARY' ? '' : formData.supplier_id,
+      customer_id: type === 'PAYMENT' || type === 'SALARY' ? '' : formData.customer_id,
+      po_no: type === 'RECEIPT' || type === 'SALARY' ? '' : formData.po_no,
+      sale_id: type === 'PAYMENT' || type === 'SALARY' ? '' : formData.sale_id,
+      // Clear salary fields when switching away from SALARY
+      employee_no: type === 'SALARY' ? formData.employee_no : '',
+      salary_month: type === 'SALARY' ? formData.salary_month : '',
+      salary_type: type === 'SALARY' ? formData.salary_type : 'REGULAR',
+      payment_amount: type === 'SALARY' ? '' : formData.payment_amount
     })
+  }
+
+  const fetchSalaryBalance = async (employeeNo, year, month) => {
+    try {
+      const res = await api.get(`/payments/salary-balance/${employeeNo}/${year}/${month}`)
+      setSalaryBalance(res.data.data)
+    } catch (error) {
+      console.error('Failed to fetch salary balance')
+      setSalaryBalance(null)
+    }
+  }
+
+  const handleEmployeeChange = (employeeNo) => {
+    const emp = employees.find(e => e.employee_no === parseInt(employeeNo))
+    const amount = emp?.monthly_salary ? parseFloat(emp.monthly_salary) : ''
+    setFormData({ ...formData, employee_no: employeeNo, payment_amount: amount })
+    setSalaryBalance(null)
+    if (employeeNo && formData.salary_month) {
+      const [y, m] = formData.salary_month.split('-')
+      fetchSalaryBalance(employeeNo, parseInt(y), parseInt(m))
+    }
+  }
+
+  const handleSalaryMonthChange = (month) => {
+    setFormData({ ...formData, salary_month: month })
+    setSalaryBalance(null)
+    if (formData.employee_no && month) {
+      const [y, m] = month.split('-')
+      fetchSalaryBalance(formData.employee_no, parseInt(y), parseInt(m))
+    }
   }
 
   // Filter purchases by selected supplier
@@ -244,7 +311,7 @@ export default function Payments() {
               <button
                 type="button"
                 onClick={() => handleTypeChange('REFUND')}
-                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors border-r border-gray-200 ${
                   formData.payment_type === 'REFUND'
                     ? 'bg-green-600 text-white'
                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -252,22 +319,35 @@ export default function Payments() {
               >
                 Refund
               </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('SALARY')}
+                className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  formData.payment_type === 'SALARY'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Salary (To Employee)
+              </button>
             </div>
           </div>
 
-          <div className="form-grid-3">
-            <div>
-              <label className="form-label">Amount *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.payment_amount}
-                onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
-                className="input-field"
-                required
-              />
-            </div>
+          <div className={formData.payment_type === 'SALARY' ? 'form-grid-2' : 'form-grid-3'}>
+            {formData.payment_type !== 'SALARY' && (
+              <div>
+                <label className="form-label">Amount *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.payment_amount}
+                  onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                  className="input-field"
+                  required
+                />
+              </div>
+            )}
             <div>
               <label className="form-label">Mode *</label>
               <select
@@ -278,7 +358,7 @@ export default function Payments() {
                 <option value="CASH">Cash</option>
                 <option value="CHEQUE">Cheque</option>
                 <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CARD">Card</option>
+                <option value="ONLINE">Online</option>
               </select>
             </div>
             <div>
@@ -322,7 +402,7 @@ export default function Payments() {
                   <option value="">Select PO</option>
                   {filteredPurchases.map(p => (
                     <option key={p.po_no} value={p.po_no}>
-                      PO #{p.po_no} - €{parseFloat(p.total_amount || 0).toFixed(2)}
+                      PO #{p.po_no} - Rs.{parseFloat(p.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                     </option>
                   ))}
                 </select>
@@ -356,11 +436,77 @@ export default function Payments() {
                   <option value="">Select Sale</option>
                   {filteredSales.map(s => (
                     <option key={s.sale_id} value={s.sale_id}>
-                      Sale #{s.sale_id} - €{parseFloat(s.total_amount || 0).toFixed(2)}
+                      Sale #{s.sale_id} - Rs.{parseFloat(s.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+          )}
+
+          {/* Salary fields - shown for SALARY type */}
+          {formData.payment_type === 'SALARY' && (
+            <div className="space-y-4">
+              <div className="form-grid-2">
+                <div>
+                  <label className="form-label">Employee *</label>
+                  <select
+                    value={formData.employee_no}
+                    onChange={(e) => handleEmployeeChange(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Select Employee</option>
+                    {employees.map(emp => (
+                      <option key={emp.employee_no} value={emp.employee_no}>{emp.employee_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Salary Type *</label>
+                  <select
+                    value={formData.salary_type}
+                    onChange={(e) => setFormData({ ...formData, salary_type: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="REGULAR">Regular</option>
+                    <option value="ADVANCE">Advance</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-grid-2">
+                <div>
+                  <label className="form-label">Salary Month *</label>
+                  <input
+                    type="month"
+                    value={formData.salary_month}
+                    onChange={(e) => handleSalaryMonthChange(e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Amount *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.payment_amount}
+                    onChange={(e) => setFormData({ ...formData, payment_amount: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+              {salaryBalance && (
+                <div className="p-3 bg-blue-50 border border-blue-200 text-sm" style={{ borderRadius: '6px' }}>
+                  <div className="font-medium text-blue-800 mb-2">Salary Balance Info</div>
+                  <div className="grid grid-cols-2 gap-2 text-blue-700">
+                    <div>Monthly Salary: <span className="font-medium">Rs.{salaryBalance.monthly_salary.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                    <div>Advance Paid: <span className="font-medium">Rs.{salaryBalance.advance_paid.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                    <div>Regular Paid: <span className="font-medium">Rs.{salaryBalance.regular_paid.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                    <div>Remaining: <span className={`font-medium ${salaryBalance.remaining <= 0 ? 'text-red-600' : ''}`}>Rs.{salaryBalance.remaining.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

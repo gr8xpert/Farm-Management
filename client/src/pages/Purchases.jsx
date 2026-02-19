@@ -21,7 +21,7 @@ export default function Purchases() {
     { key: 'po_no', label: 'PO #' },
     { key: 'po_date', label: 'Date', render: (val) => val ? new Date(val).toLocaleDateString() : '-' },
     { key: 'supplier', label: 'Supplier', render: (val) => val?.supplier_name || '-' },
-    { key: 'total_amount', label: 'Total', render: (val) => `€${parseFloat(val || 0).toFixed(2)}` },
+    { key: 'total_amount', label: 'Total', render: (val) => `Rs.${parseFloat(val || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}` },
     { key: 'details', label: 'Items', render: (val) => `${val?.length || 0} items` },
     { key: 'remarks', label: 'Remarks' },
   ]
@@ -113,7 +113,7 @@ export default function Purchases() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><span className="text-gray-500">Date:</span> <span className="text-gray-800">{new Date(viewingPurchase.po_date).toLocaleDateString()}</span></div>
                   <div><span className="text-gray-500">Supplier:</span> <span className="text-gray-800">{viewingPurchase.supplier?.supplier_name}</span></div>
-                  <div><span className="text-gray-500">Total:</span> <span className="text-gray-800 font-medium">€{parseFloat(viewingPurchase.total_amount || 0).toFixed(2)}</span></div>
+                  <div><span className="text-gray-500">Total:</span> <span className="text-gray-800 font-medium">Rs.{parseFloat(viewingPurchase.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
                   <div><span className="text-gray-500">Remarks:</span> <span className="text-gray-800">{viewingPurchase.remarks || '-'}</span></div>
                 </div>
                 <div className="border-t border-gray-100 pt-4">
@@ -132,8 +132,8 @@ export default function Purchases() {
                         <tr key={i} className="border-b border-gray-50">
                           <td className="py-2 text-gray-800">{d.item?.items_description}</td>
                           <td className="text-right text-gray-800">{d.qty}</td>
-                          <td className="text-right text-gray-800">€{parseFloat(d.price).toFixed(2)}</td>
-                          <td className="text-right text-gray-800 font-medium">€{(parseFloat(d.qty) * parseFloat(d.price)).toFixed(2)}</td>
+                          <td className="text-right text-gray-800">Rs.{parseFloat(d.price).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right text-gray-800 font-medium">Rs.{(parseFloat(d.qty) * parseFloat(d.price)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       ))}
                     </tbody>

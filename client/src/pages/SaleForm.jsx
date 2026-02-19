@@ -4,7 +4,7 @@ import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 
-const emptyDetail = { item_id: '', qty: '', price: '', age: '', weight: '', remarks: '' }
+const emptyDetail = { item_id: '', qty: '', price: '', age: '', weight: '', weight_unit: '', remarks: '' }
 
 export default function SaleForm() {
   const navigate = useNavigate()
@@ -57,6 +57,7 @@ export default function SaleForm() {
           price: d.price,
           age: d.age || '',
           weight: d.weight || '',
+          weight_unit: d.weight_unit || '',
           remarks: d.remarks || ''
         }))
       })
@@ -104,6 +105,7 @@ export default function SaleForm() {
           price: parseFloat(d.price),
           age: d.age ? parseInt(d.age) : null,
           weight: d.weight ? parseFloat(d.weight) : null,
+          weight_unit: d.weight_unit || null,
           remarks: d.remarks
         }))
       }
@@ -215,6 +217,7 @@ export default function SaleForm() {
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">Price *</th>
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-16">Age</th>
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-20">Weight</th>
+                  <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">Unit</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600 w-24">Total</th>
                   <th className="w-8"></th>
                 </tr>
@@ -273,8 +276,23 @@ export default function SaleForm() {
                         className="input-field text-sm"
                       />
                     </td>
+                    <td className="py-2 px-2">
+                      <select
+                        value={detail.weight_unit}
+                        onChange={(e) => handleDetailChange(index, 'weight_unit', e.target.value)}
+                        className="input-field text-sm"
+                      >
+                        <option value="">-</option>
+                        <option value="KG">KG</option>
+                        <option value="Mann">Mann</option>
+                        <option value="Packet">Packet</option>
+                        <option value="Loose">Loose</option>
+                        <option value="Ton">Ton</option>
+                        <option value="Gram">Gram</option>
+                      </select>
+                    </td>
                     <td className="py-2 px-2 text-right font-medium text-gray-800">
-                      €{((parseFloat(detail.qty) || 0) * (parseFloat(detail.price) || 0)).toFixed(2)}
+                      Rs.{((parseFloat(detail.qty) || 0) * (parseFloat(detail.price) || 0)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-2 px-2">
                       <button
@@ -292,11 +310,11 @@ export default function SaleForm() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan="5" className="py-3 px-2 text-right font-semibold text-gray-700">
+                  <td colSpan="6" className="py-3 px-2 text-right font-semibold text-gray-700">
                     Grand Total:
                   </td>
                   <td className="py-3 px-2 text-right font-bold text-base text-green-600">
-                    €{calculateTotal().toFixed(2)}
+                    Rs.{calculateTotal().toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                   </td>
                   <td></td>
                 </tr>

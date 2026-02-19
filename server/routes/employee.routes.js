@@ -76,13 +76,14 @@ router.post('/',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { dob, doj, ...rest } = req.body;
+      const { dob, doj, monthly_salary, ...rest } = req.body;
 
       const employee = await req.prisma.employee.create({
         data: {
           ...rest,
           dob: dob ? new Date(dob) : null,
-          doj: doj ? new Date(doj) : null
+          doj: doj ? new Date(doj) : null,
+          monthly_salary: monthly_salary ? parseFloat(monthly_salary) : null
         }
       });
 
@@ -108,14 +109,15 @@ router.put('/:id',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { dob, doj, ...rest } = req.body;
+      const { dob, doj, monthly_salary, ...rest } = req.body;
 
       const employee = await req.prisma.employee.update({
         where: { employee_no: parseInt(req.params.id) },
         data: {
           ...rest,
           dob: dob ? new Date(dob) : null,
-          doj: doj ? new Date(doj) : null
+          doj: doj ? new Date(doj) : null,
+          monthly_salary: monthly_salary ? parseFloat(monthly_salary) : null
         }
       });
 

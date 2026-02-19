@@ -49,6 +49,7 @@ export default function SaleReturnForm() {
           price: d.price,
           age: d.age || '',
           weight: d.weight || '',
+          weight_unit: d.weight_unit || '',
           remarks: ''
         }))
       })
@@ -97,6 +98,7 @@ export default function SaleReturnForm() {
           price: parseFloat(d.price),
           age: d.age ? parseInt(d.age) : null,
           weight: d.weight ? parseFloat(d.weight) : null,
+          weight_unit: d.weight_unit || null,
           remarks: d.remarks
         }))
       })
@@ -178,15 +180,15 @@ export default function SaleReturnForm() {
                           disabled={detail.available_qty <= 0}
                         />
                       </td>
-                      <td className="py-2 px-2 text-right">€{parseFloat(detail.price).toFixed(2)}</td>
-                      <td className="py-2 px-2 text-right font-medium">€{((parseFloat(detail.return_qty) || 0) * parseFloat(detail.price)).toFixed(2)}</td>
+                      <td className="py-2 px-2 text-right">Rs.{parseFloat(detail.price).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-2 text-right font-medium">Rs.{((parseFloat(detail.return_qty) || 0) * parseFloat(detail.price)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan="6" className="py-3 px-2 text-right font-semibold">Return Total:</td>
-                    <td className="py-3 px-2 text-right font-bold text-lg text-red-600">€{calculateTotal().toFixed(2)}</td>
+                    <td className="py-3 px-2 text-right font-bold text-lg text-red-600">Rs.{calculateTotal().toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tfoot>
               </table>

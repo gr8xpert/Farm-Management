@@ -31,7 +31,7 @@ export default function SaleReturns() {
         {reasonLabels[val] || val}
       </span>
     )},
-    { key: 'total_amount', label: 'Total', render: (val) => `€${parseFloat(val || 0).toFixed(2)}` },
+    { key: 'total_amount', label: 'Total', render: (val) => `Rs.${parseFloat(val || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}` },
   ]
 
   useEffect(() => { fetchReturns() }, [])
@@ -124,8 +124,8 @@ export default function SaleReturns() {
                         <tr key={i} className="border-b border-gray-50">
                           <td className="py-2 text-gray-800">{d.item?.items_description}</td>
                           <td className="text-right text-gray-800">{d.qty}</td>
-                          <td className="text-right text-gray-800">€{parseFloat(d.price).toFixed(2)}</td>
-                          <td className="text-right text-gray-800 font-medium">€{(parseFloat(d.qty) * parseFloat(d.price)).toFixed(2)}</td>
+                          <td className="text-right text-gray-800">Rs.{parseFloat(d.price).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right text-gray-800 font-medium">Rs.{(parseFloat(d.qty) * parseFloat(d.price)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       ))}
                     </tbody>

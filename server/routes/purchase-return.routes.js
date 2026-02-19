@@ -213,6 +213,7 @@ router.post('/',
             price: parseFloat(d.price),
             age: d.age ? parseInt(d.age) : null,
             weight: d.weight ? parseFloat(d.weight) : null,
+            weight_unit: d.weight_unit || null,
             remarks: d.remarks
           }))
         });
