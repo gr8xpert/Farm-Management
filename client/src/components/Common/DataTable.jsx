@@ -104,9 +104,7 @@ export default function DataTable({
               {columns.map((col) => (
                 <th key={col.key}>{col.label}</th>
               ))}
-              {(onEdit || onDelete || onView) && (
-                <th className="text-right">Actions</th>
-              )}
+              {(onEdit || onDelete || onView) && <th />}
             </tr>
           </thead>
           <tbody>

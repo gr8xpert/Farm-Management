@@ -47,8 +47,21 @@ export default function Employees() {
   const [editingId, setEditingId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [deletingItem, setDeletingItem] = useState(null)
+  const [cities, setCities] = useState([])
 
   useEffect(() => { fetchEmployees() }, [search])
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const res = await api.get('/cities', { params: { limit: 200 } })
+        setCities(res.data.data)
+      } catch (error) {
+        // silently fail — city dropdown will just be empty
+      }
+    }
+    fetchCities()
+  }, [])
 
   const fetchEmployees = async (page = 1) => {
     setLoading(true)
@@ -224,12 +237,16 @@ export default function Employees() {
           <div className="form-grid-2">
             <div>
               <label className="form-label">City</label>
-              <input
-                type="text"
+              <select
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="input-field"
-              />
+              >
+                <option value="">Select City</option>
+                {cities.map(c => (
+                  <option key={c.city_id} value={c.city_name}>{c.city_name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="form-label">Province</label>

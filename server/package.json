@@ -8,7 +8,10 @@
     "start": "node index.js",
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npx prisma db seed",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "deploy:migrate": "prisma migrate deploy",
+    "deploy:push": "prisma db push",
+    "deploy:seed": "node prisma/seed.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

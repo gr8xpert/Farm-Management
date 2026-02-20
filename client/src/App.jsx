@@ -9,6 +9,8 @@ import Suppliers from './pages/Suppliers'
 import Customers from './pages/Customers'
 import Items from './pages/Items'
 import Categories from './pages/Categories'
+import WeightUnits from './pages/WeightUnits'
+import Cities from './pages/Cities'
 import Banks from './pages/Banks'
 import Employees from './pages/Employees'
 import Purchases from './pages/Purchases'
@@ -41,6 +43,8 @@ function App() {
             <Route path="customers" element={<Customers />} />
             <Route path="items" element={<Items />} />
             <Route path="categories" element={<Categories />} />
+            <Route path="weight-units" element={<WeightUnits />} />
+            <Route path="cities" element={<Cities />} />
             <Route path="banks" element={<Banks />} />
             <Route path="employees" element={<Employees />} />
             <Route path="purchases" element={<Purchases />} />

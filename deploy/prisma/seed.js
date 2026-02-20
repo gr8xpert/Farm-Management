@@ -64,6 +64,27 @@ async function main() {
   ]);
   console.log('Created categories:', categories.length);
 
+  // Create weight units
+  const weightUnits = await Promise.all([
+    prisma.weightUnit.upsert({ where: { unit_id: 1 }, update: {}, create: { unit_name: 'KG', description: 'Kilogram' } }),
+    prisma.weightUnit.upsert({ where: { unit_id: 2 }, update: {}, create: { unit_name: 'Mann', description: 'Traditional unit (~40kg)' } }),
+    prisma.weightUnit.upsert({ where: { unit_id: 3 }, update: {}, create: { unit_name: 'Packet', description: 'Packaged unit' } }),
+    prisma.weightUnit.upsert({ where: { unit_id: 4 }, update: {}, create: { unit_name: 'Loose', description: 'Loose/bulk quantity' } }),
+    prisma.weightUnit.upsert({ where: { unit_id: 5 }, update: {}, create: { unit_name: 'Ton', description: 'Metric ton' } }),
+    prisma.weightUnit.upsert({ where: { unit_id: 6 }, update: {}, create: { unit_name: 'Gram', description: 'Gram' } }),
+  ]);
+  console.log('Created weight units:', weightUnits.length);
+
+  // Create cities
+  const cities = await Promise.all([
+    prisma.city.upsert({ where: { city_id: 1 }, update: {}, create: { city_name: 'Malaga' } }),
+    prisma.city.upsert({ where: { city_id: 2 }, update: {}, create: { city_name: 'Marbella' } }),
+    prisma.city.upsert({ where: { city_id: 3 }, update: {}, create: { city_name: 'Seville' } }),
+    prisma.city.upsert({ where: { city_id: 4 }, update: {}, create: { city_name: 'Granada' } }),
+    prisma.city.upsert({ where: { city_id: 5 }, update: {}, create: { city_name: 'Cordoba' } }),
+  ]);
+  console.log('Created cities:', cities.length);
+
   // Create items
   const items = await Promise.all([
     prisma.item.upsert({

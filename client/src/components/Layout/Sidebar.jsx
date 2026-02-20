@@ -12,7 +12,9 @@ import {
   CreditCard,
   RotateCcw,
   Settings,
-  X
+  X,
+  Scale,
+  MapPin
 } from 'lucide-react'
 
 const navigation = [
@@ -21,6 +23,8 @@ const navigation = [
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Items', href: '/items', icon: Package },
   { name: 'Categories', href: '/categories', icon: FolderTree },
+  { name: 'Weight Units', href: '/weight-units', icon: Scale },
+  { name: 'Cities', href: '/cities', icon: MapPin },
   { name: 'Banks', href: '/banks', icon: Building2 },
   { name: 'Employees', href: '/employees', icon: UserCircle },
   { name: 'Purchases', href: '/purchases', icon: ShoppingCart },

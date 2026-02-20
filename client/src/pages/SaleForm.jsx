@@ -20,6 +20,7 @@ export default function SaleForm() {
   })
   const [customers, setCustomers] = useState([])
   const [items, setItems] = useState([])
+  const [weightUnits, setWeightUnits] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,12 +31,14 @@ export default function SaleForm() {
 
   const fetchDropdownData = async () => {
     try {
-      const [customersRes, itemsRes] = await Promise.all([
+      const [customersRes, itemsRes, weightUnitsRes] = await Promise.all([
         api.get('/customers', { params: { limit: 100 } }),
-        api.get('/items', { params: { limit: 100 } })
+        api.get('/items', { params: { limit: 100 } }),
+        api.get('/weight-units', { params: { limit: 100 } })
       ])
       setCustomers(customersRes.data.data)
       setItems(itemsRes.data.data)
+      setWeightUnits(weightUnitsRes.data.data)
     } catch (error) {
       toast.error('Failed to load data')
     }
@@ -283,12 +286,9 @@ export default function SaleForm() {
                         className="input-field text-sm"
                       >
                         <option value="">-</option>
-                        <option value="KG">KG</option>
-                        <option value="Mann">Mann</option>
-                        <option value="Packet">Packet</option>
-                        <option value="Loose">Loose</option>
-                        <option value="Ton">Ton</option>
-                        <option value="Gram">Gram</option>
+                        {weightUnits.map(u => (
+                          <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
+                        ))}
                       </select>
                     </td>
                     <td className="py-2 px-2 text-right font-medium text-gray-800">
