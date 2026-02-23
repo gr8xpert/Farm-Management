@@ -385,3 +385,27 @@ enum ReturnReason {
   QUALITY_ISSUE
   OTHER
 }
+
+enum EntityType {
+  PURCHASE_MASTER
+  PURCHASE_DETAIL
+  SALE_MASTER
+  SALE_DETAIL
+}
+
+model Attachment {
+  id            Int        @id @default(autoincrement())
+  entity_type   EntityType
+  entity_id     Int
+  sno           Int?
+  file_path     String     @db.VarChar(500)
+  original_name String     @db.VarChar(255)
+  mime_type     String?    @db.VarChar(100)
+  file_size     Int?
+  created_by    String?    @db.VarChar(50)
+  created_on    DateTime   @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([entity_type, entity_id, sno])
+  @@map("attachments")
+}

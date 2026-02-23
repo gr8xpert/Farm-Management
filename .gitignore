@@ -32,6 +32,10 @@ prisma/*.db-journal
 # Deploy folder - keep structure but ignore built files
 deploy/node_modules/
 
+# Uploaded files
+server/uploads/
+!server/uploads/.gitkeep
+
 # Misc
 *.tmp
 *.temp

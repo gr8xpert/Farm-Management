@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Trash2, ArrowLeft, Loader2 } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Loader2, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
+import ImageUploader from '../components/Common/ImageUploader'
 
-const emptyDetail = { item_id: '', qty: '', price: '', age: '', weight: '', weight_unit: '', remarks: '' }
+const emptyDetail = { item_id: '', qty: '', price: '', age: '', weight: '', weight_unit: '', remarks: '', images: [] }
 
 export default function SaleForm() {
   const navigate = useNavigate()
@@ -18,11 +19,13 @@ export default function SaleForm() {
     ref_name: '',
     details: [{ ...emptyDetail }]
   })
+  const [masterImages, setMasterImages] = useState([])
   const [customers, setCustomers] = useState([])
   const [items, setItems] = useState([])
   const [weightUnits, setWeightUnits] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [expandedImageRow, setExpandedImageRow] = useState(null)
 
   useEffect(() => {
     fetchDropdownData()
@@ -61,9 +64,11 @@ export default function SaleForm() {
           age: d.age || '',
           weight: d.weight || '',
           weight_unit: d.weight_unit || '',
-          remarks: d.remarks || ''
+          remarks: d.remarks || '',
+          images: d.images || []
         }))
       })
+      setMasterImages(sale.master_images || [])
     } catch (error) {
       toast.error('Failed to load sale')
       navigate('/sales')
@@ -84,6 +89,8 @@ export default function SaleForm() {
     if (formData.details.length === 1) return
     const newDetails = formData.details.filter((_, i) => i !== index)
     setFormData({ ...formData, details: newDetails })
+    if (expandedImageRow === index) setExpandedImageRow(null)
+    else if (expandedImageRow > index) setExpandedImageRow(expandedImageRow - 1)
   }
 
   const calculateTotal = () => {
@@ -102,6 +109,7 @@ export default function SaleForm() {
       const payload = {
         ...formData,
         customer_id: parseInt(formData.customer_id),
+        master_images: masterImages,
         details: formData.details.map(d => ({
           item_id: parseInt(d.item_id),
           qty: parseFloat(d.qty),
@@ -109,7 +117,8 @@ export default function SaleForm() {
           age: d.age ? parseInt(d.age) : null,
           weight: d.weight ? parseFloat(d.weight) : null,
           weight_unit: d.weight_unit || null,
-          remarks: d.remarks
+          remarks: d.remarks,
+          images: d.images || []
         }))
       }
 
@@ -196,6 +205,14 @@ export default function SaleForm() {
               rows={2}
             />
           </div>
+          <div className="mt-3">
+            <ImageUploader
+              images={masterImages}
+              onChange={setMasterImages}
+              maxImages={5}
+              label="Attachments"
+            />
+          </div>
         </div>
 
         <div className="card">
@@ -222,90 +239,115 @@ export default function SaleForm() {
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-20">Weight</th>
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">Unit</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600 w-24">Total</th>
-                  <th className="w-8"></th>
+                  <th className="w-16"></th>
                 </tr>
               </thead>
               <tbody>
                 {formData.details.map((detail, index) => (
-                  <tr key={index} className="border-b border-gray-50">
-                    <td className="py-2 px-2">
-                      <select
-                        value={detail.item_id}
-                        onChange={(e) => handleDetailChange(index, 'item_id', e.target.value)}
-                        className="input-field text-sm"
-                      >
-                        <option value="">Select Item</option>
-                        {items.map(i => (
-                          <option key={i.item_id} value={i.item_id}>{i.items_description}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={detail.qty}
-                        onChange={(e) => handleDetailChange(index, 'qty', e.target.value)}
-                        className="input-field text-sm"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={detail.price}
-                        onChange={(e) => handleDetailChange(index, 'price', e.target.value)}
-                        className="input-field text-sm"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={detail.age}
-                        onChange={(e) => handleDetailChange(index, 'age', e.target.value)}
-                        className="input-field text-sm"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={detail.weight}
-                        onChange={(e) => handleDetailChange(index, 'weight', e.target.value)}
-                        className="input-field text-sm"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <select
-                        value={detail.weight_unit}
-                        onChange={(e) => handleDetailChange(index, 'weight_unit', e.target.value)}
-                        className="input-field text-sm"
-                      >
-                        <option value="">-</option>
-                        {weightUnits.map(u => (
-                          <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2 px-2 text-right font-medium text-gray-800">
-                      Rs.{((parseFloat(detail.qty) || 0) * (parseFloat(detail.price) || 0)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-2">
-                      <button
-                        type="button"
-                        onClick={() => removeDetail(index)}
-                        disabled={formData.details.length === 1}
-                        className="p-1 hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
-                        style={{ borderRadius: '3px' }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr key={index} className="border-b border-gray-50">
+                      <td className="py-2 px-2">
+                        <select
+                          value={detail.item_id}
+                          onChange={(e) => handleDetailChange(index, 'item_id', e.target.value)}
+                          className="input-field text-sm"
+                        >
+                          <option value="">Select Item</option>
+                          {items.map(i => (
+                            <option key={i.item_id} value={i.item_id}>{i.items_description}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={detail.qty}
+                          onChange={(e) => handleDetailChange(index, 'qty', e.target.value)}
+                          className="input-field text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={detail.price}
+                          onChange={(e) => handleDetailChange(index, 'price', e.target.value)}
+                          className="input-field text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={detail.age}
+                          onChange={(e) => handleDetailChange(index, 'age', e.target.value)}
+                          className="input-field text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={detail.weight}
+                          onChange={(e) => handleDetailChange(index, 'weight', e.target.value)}
+                          className="input-field text-sm"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <select
+                          value={detail.weight_unit}
+                          onChange={(e) => handleDetailChange(index, 'weight_unit', e.target.value)}
+                          className="input-field text-sm"
+                        >
+                          <option value="">-</option>
+                          {weightUnits.map(u => (
+                            <option key={u.unit_id} value={u.unit_name}>{u.unit_name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2 text-right font-medium text-gray-800">
+                        Rs.{((parseFloat(detail.qty) || 0) * (parseFloat(detail.price) || 0)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedImageRow(expandedImageRow === index ? null : index)}
+                            className={`p-1 transition-colors ${expandedImageRow === index ? 'bg-green-50 text-green-600' : 'hover:bg-gray-50 text-gray-400'} ${detail.images?.length > 0 ? 'text-green-600' : ''}`}
+                            style={{ borderRadius: '3px' }}
+                            title="Attach images"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeDetail(index)}
+                            disabled={formData.details.length === 1}
+                            className="p-1 hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
+                            style={{ borderRadius: '3px' }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedImageRow === index && (
+                      <tr key={`img-${index}`} className="border-b border-gray-50">
+                        <td colSpan="8" className="py-2 px-4 bg-gray-50/50">
+                          <ImageUploader
+                            images={detail.images || []}
+                            onChange={(imgs) => handleDetailChange(index, 'images', imgs)}
+                            maxImages={5}
+                            label={`Item #${index + 1} Photos`}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
               <tfoot>

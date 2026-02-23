@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import DataTable from '../components/Common/DataTable'
@@ -16,6 +16,7 @@ export default function Sales() {
   const [deletingItem, setDeletingItem] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [viewingSale, setViewingSale] = useState(null)
+  const [viewLoading, setViewLoading] = useState(false)
 
   const columns = [
     { key: 'sale_id', label: 'Sale #' },
@@ -39,6 +40,17 @@ export default function Sales() {
     } finally { setLoading(false) }
   }
 
+  const handleView = async (item) => {
+    setViewLoading(true)
+    setViewingSale(item)
+    try {
+      const response = await api.get(`/sales/${item.sale_id}`)
+      setViewingSale(response.data.data)
+    } catch (error) {
+      toast.error('Failed to load sale details')
+    } finally { setViewLoading(false) }
+  }
+
   const handleDelete = async () => {
     setSubmitting(true)
     try {
@@ -48,6 +60,44 @@ export default function Sales() {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Delete failed')
     } finally { setSubmitting(false) }
+  }
+
+  const isPdf = (img) => {
+    return img.mime_type === 'application/pdf' || img.original_name?.endsWith('.pdf')
+  }
+
+  const renderImageThumbnails = (images, label) => {
+    if (!images || images.length === 0) return null
+    return (
+      <div className="mt-2">
+        <span className="text-xs text-gray-500">{label}</span>
+        <div className="flex flex-wrap gap-2 mt-1">
+          {images.map((img) => (
+            <a
+              key={img.id || img.file_path}
+              href={`/uploads/${img.file_path}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 hover:border-green-400 transition-colors"
+              title={img.original_name}
+            >
+              {isPdf(img) ? (
+                <span className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                  <FileText className="w-5 h-5" />
+                  <span className="text-[8px]">PDF</span>
+                </span>
+              ) : (
+                <img
+                  src={`/uploads/${img.file_path}`}
+                  alt={img.original_name}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </a>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -82,7 +132,7 @@ export default function Sales() {
           data={sales}
           pagination={pagination}
           onPageChange={fetchSales}
-          onView={(item) => setViewingSale(item)}
+          onView={handleView}
           onEdit={(item) => navigate(`/sales/${item.sale_id}/edit`)}
           onDelete={(item) => { setDeletingItem(item); setDeleteOpen(true) }}
           loading={loading}
@@ -104,7 +154,7 @@ export default function Sales() {
                   onClick={() => setViewingSale(null)}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none"
                 >
-                  ×
+                  x
                 </button>
               </div>
               <div className="p-5 space-y-4">
@@ -114,6 +164,10 @@ export default function Sales() {
                   <div><span className="text-gray-500">Total:</span> <span className="text-gray-800 font-medium">Rs.{parseFloat(viewingSale.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
                   <div><span className="text-gray-500">Remarks:</span> <span className="text-gray-800">{viewingSale.remarks || '-'}</span></div>
                 </div>
+
+                {/* Master Images */}
+                {renderImageThumbnails(viewingSale.master_images, 'Attachments')}
+
                 <div className="border-t border-gray-100 pt-4">
                   <h4 className="font-medium text-gray-700 mb-2 text-sm">Items</h4>
                   <table className="w-full text-sm">
@@ -127,12 +181,21 @@ export default function Sales() {
                     </thead>
                     <tbody>
                       {viewingSale.details?.map((d, i) => (
-                        <tr key={i} className="border-b border-gray-50">
-                          <td className="py-2 text-gray-800">{d.item?.items_description}</td>
-                          <td className="text-right text-gray-800">{d.qty}</td>
-                          <td className="text-right text-gray-800">Rs.{parseFloat(d.price).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right text-gray-800 font-medium">Rs.{(parseFloat(d.qty) * parseFloat(d.price)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
-                        </tr>
+                        <>
+                          <tr key={i} className="border-b border-gray-50">
+                            <td className="py-2 text-gray-800">{d.item?.items_description}</td>
+                            <td className="text-right text-gray-800">{d.qty}</td>
+                            <td className="text-right text-gray-800">Rs.{parseFloat(d.price).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
+                            <td className="text-right text-gray-800 font-medium">Rs.{(parseFloat(d.qty) * parseFloat(d.price)).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                          {d.images && d.images.length > 0 && (
+                            <tr key={`img-${i}`}>
+                              <td colSpan="4" className="py-1 pl-4">
+                                {renderImageThumbnails(d.images, `Item #${i + 1} Photos`)}
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>

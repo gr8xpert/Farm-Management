@@ -19,6 +19,7 @@ const paymentRoutes = require('./routes/payment.routes');
 const purchaseReturnRoutes = require('./routes/purchase-return.routes');
 const saleReturnRoutes = require('./routes/sale-return.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const uploadRoutes = require('./routes/upload.routes');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -50,11 +51,18 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/purchase-returns', purchaseReturnRoutes);
 app.use('/api/sale-returns', saleReturnRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is running' });
 });
+
+// Serve uploaded files with security headers
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files from public folder (built frontend)
 app.use(express.static(path.join(__dirname, 'public')));

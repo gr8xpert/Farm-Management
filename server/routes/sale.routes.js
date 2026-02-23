@@ -1,9 +1,71 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { authMiddleware } = require('../middleware/auth');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Helper: save attachment records for a sale
+async function saveAttachments(prisma, sale_id, masterImages, details, username) {
+  const records = [];
+
+  // Master-level images
+  if (masterImages && masterImages.length > 0) {
+    for (const img of masterImages) {
+      records.push({
+        entity_type: 'SALE_MASTER',
+        entity_id: sale_id,
+        sno: null,
+        file_path: img.file_path,
+        original_name: img.original_name,
+        mime_type: img.mime_type || null,
+        file_size: img.file_size || null,
+        created_by: username
+      });
+    }
+  }
+
+  // Detail-level images (keyed by sno)
+  if (details && details.length > 0) {
+    details.forEach((d, index) => {
+      if (d.images && d.images.length > 0) {
+        for (const img of d.images) {
+          records.push({
+            entity_type: 'SALE_DETAIL',
+            entity_id: sale_id,
+            sno: index + 1,
+            file_path: img.file_path,
+            original_name: img.original_name,
+            mime_type: img.mime_type || null,
+            file_size: img.file_size || null,
+            created_by: username
+          });
+        }
+      }
+    });
+  }
+
+  if (records.length > 0) {
+    await prisma.attachment.createMany({ data: records });
+  }
+}
+
+// Helper: delete physical files for attachment records
+function deletePhysicalFiles(attachments) {
+  const uploadsDir = path.join(__dirname, '..', 'uploads');
+  for (const att of attachments) {
+    try {
+      const fullPath = path.join(uploadsDir, att.file_path);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    } catch (err) {
+      console.error('Failed to delete file:', att.file_path, err.message);
+    }
+  }
+}
 
 // Get all sales with pagination
 router.get('/', async (req, res) => {
@@ -55,11 +117,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single sale
+// Get single sale (with attachments)
 router.get('/:id', async (req, res) => {
   try {
+    const sale_id = parseInt(req.params.id);
     const sale = await req.prisma.saleMaster.findUnique({
-      where: { sale_id: parseInt(req.params.id) },
+      where: { sale_id },
       include: {
         customer: true,
         details: {
@@ -73,7 +136,32 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
 
-    res.json({ success: true, data: sale });
+    // Fetch attachments
+    const attachments = await req.prisma.attachment.findMany({
+      where: {
+        entity_type: { in: ['SALE_MASTER', 'SALE_DETAIL'] },
+        entity_id: sale_id
+      }
+    });
+
+    // Separate master and detail images
+    const master_images = attachments.filter(a => a.entity_type === 'SALE_MASTER');
+    const detailImages = attachments.filter(a => a.entity_type === 'SALE_DETAIL');
+
+    // Attach images to each detail by sno
+    const detailsWithImages = sale.details.map(d => ({
+      ...d,
+      images: detailImages.filter(a => a.sno === d.sno)
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        ...sale,
+        details: detailsWithImages,
+        master_images
+      }
+    });
   } catch (error) {
     console.error('Get sale error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch sale' });
@@ -96,7 +184,7 @@ router.post('/',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { customer_id, sale_date, remarks, ref_name, details } = req.body;
+      const { customer_id, sale_date, remarks, ref_name, details, master_images } = req.body;
 
       const total_amount = details.reduce((sum, d) => sum + (parseFloat(d.qty) * parseFloat(d.price)), 0);
 
@@ -127,6 +215,9 @@ router.post('/',
             remarks: d.remarks
           }))
         });
+
+        // Save attachments
+        await saveAttachments(prisma, master.sale_id, master_images, details, req.user.username);
 
         return prisma.saleMaster.findUnique({
           where: { sale_id: master.sale_id },
@@ -163,9 +254,32 @@ router.put('/:id',
       }
 
       const sale_id = parseInt(req.params.id);
-      const { customer_id, sale_date, remarks, ref_name, details } = req.body;
+      const { customer_id, sale_date, remarks, ref_name, details, master_images } = req.body;
 
       const total_amount = details.reduce((sum, d) => sum + (parseFloat(d.qty) * parseFloat(d.price)), 0);
+
+      // Get existing attachments to reconcile
+      const existingAttachments = await req.prisma.attachment.findMany({
+        where: {
+          entity_type: { in: ['SALE_MASTER', 'SALE_DETAIL'] },
+          entity_id: sale_id
+        }
+      });
+
+      // Determine which existing attachments to keep
+      const incomingMasterIds = (master_images || []).filter(img => img.id).map(img => img.id);
+      const incomingDetailIds = (details || []).flatMap(d => (d.images || []).filter(img => img.id).map(img => img.id));
+      const keepIds = new Set([...incomingMasterIds, ...incomingDetailIds]);
+
+      // Attachments to remove
+      const toRemove = existingAttachments.filter(a => !keepIds.has(a.id));
+
+      // New attachments (those without id)
+      const newMasterImages = (master_images || []).filter(img => !img.id);
+      const newDetails = (details || []).map(d => ({
+        ...d,
+        images: (d.images || []).filter(img => !img.id)
+      }));
 
       const sale = await req.prisma.$transaction(async (prisma) => {
         await prisma.saleMaster.update({
@@ -195,6 +309,27 @@ router.put('/:id',
           }))
         });
 
+        // Remove old attachments
+        if (toRemove.length > 0) {
+          await prisma.attachment.deleteMany({
+            where: { id: { in: toRemove.map(a => a.id) } }
+          });
+        }
+
+        // Update sno for kept detail attachments
+        for (let i = 0; i < details.length; i++) {
+          const keptImgs = (details[i].images || []).filter(img => img.id);
+          for (const img of keptImgs) {
+            await prisma.attachment.update({
+              where: { id: img.id },
+              data: { sno: i + 1 }
+            });
+          }
+        }
+
+        // Save new attachments
+        await saveAttachments(prisma, sale_id, newMasterImages, newDetails, req.user.username);
+
         return prisma.saleMaster.findUnique({
           where: { sale_id },
           include: {
@@ -203,6 +338,9 @@ router.put('/:id',
           }
         });
       });
+
+      // Delete physical files for removed attachments
+      deletePhysicalFiles(toRemove);
 
       res.json({
         success: true,
@@ -232,10 +370,27 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
+    // Fetch attachments before deleting
+    const attachments = await req.prisma.attachment.findMany({
+      where: {
+        entity_type: { in: ['SALE_MASTER', 'SALE_DETAIL'] },
+        entity_id: sale_id
+      }
+    });
+
     await req.prisma.$transaction(async (prisma) => {
+      await prisma.attachment.deleteMany({
+        where: {
+          entity_type: { in: ['SALE_MASTER', 'SALE_DETAIL'] },
+          entity_id: sale_id
+        }
+      });
       await prisma.saleDetail.deleteMany({ where: { sale_id } });
       await prisma.saleMaster.delete({ where: { sale_id } });
     });
+
+    // Delete physical files
+    deletePhysicalFiles(attachments);
 
     res.json({ success: true, message: 'Sale deleted successfully' });
   } catch (error) {
