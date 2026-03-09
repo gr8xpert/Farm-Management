@@ -13,6 +13,7 @@ router.get('/', async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {
+      active: true,
       ...(search && {
         OR: [
           { username: { contains: search } },
