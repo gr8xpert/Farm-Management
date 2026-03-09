@@ -6,7 +6,7 @@ import DataTable from '../components/Common/DataTable'
 import FormModal from '../components/Common/FormModal'
 import DeleteConfirm from '../components/Common/DeleteConfirm'
 
-const initialFormData = { bank_name: '', active: true }
+const initialFormData = { bank_name: '', branch: '', address: '', active: true }
 
 export default function Banks() {
   const [banks, setBanks] = useState([])
@@ -23,6 +23,8 @@ export default function Banks() {
   const columns = [
     { key: 'bank_id', label: 'ID' },
     { key: 'bank_name', label: 'Bank Name' },
+    { key: 'branch', label: 'Branch' },
+    { key: 'address', label: 'Address' },
     { key: 'created_on', label: 'Created', render: (val) => val ? new Date(val).toLocaleDateString() : '-' },
     {
       key: 'active',
@@ -62,6 +64,8 @@ export default function Banks() {
     try {
       await api.put(`/banks/${bank.bank_id}`, {
         bank_name: bank.bank_name,
+        branch: bank.branch || '',
+        address: bank.address || '',
         active: !bank.active
       })
       toast.success(`Bank ${!bank.active ? 'activated' : 'deactivated'}`)
@@ -99,6 +103,8 @@ export default function Banks() {
   const handleEdit = (bank) => {
     setFormData({
       bank_name: bank.bank_name || '',
+      branch: bank.branch || '',
+      address: bank.address || '',
       active: bank.active
     })
     setEditingId(bank.bank_id)
@@ -174,6 +180,26 @@ export default function Banks() {
               onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
               className="input-field"
               required
+            />
+          </div>
+          <div>
+            <label className="form-label">Branch</label>
+            <input
+              type="text"
+              value={formData.branch}
+              onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+              className="input-field"
+              placeholder="e.g. Main Branch, City Center"
+            />
+          </div>
+          <div>
+            <label className="form-label">Address</label>
+            <textarea
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="input-field"
+              rows={2}
+              placeholder="Bank address..."
             />
           </div>
           {editingId && (

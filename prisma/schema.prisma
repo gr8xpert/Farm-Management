@@ -131,6 +131,8 @@ model Item {
 model Bank {
   bank_id       Int       @id @default(autoincrement())
   bank_name     String    @db.VarChar(100)
+  branch        String?   @db.VarChar(100)
+  address       String?   @db.VarChar(255)
   active        Boolean   @default(true)
   created_on    DateTime  @default(now())
   created_by    String?   @db.VarChar(50)
@@ -391,6 +393,7 @@ enum EntityType {
   PURCHASE_DETAIL
   SALE_MASTER
   SALE_DETAIL
+  PAYMENT
 }
 
 model Attachment {

@@ -34,9 +34,31 @@ router.get('/', async (req, res) => {
       req.prisma.payment.count({ where })
     ]);
 
+    // Fetch attachments for all payments
+    const paymentIds = payments.map(p => p.payment_id);
+    const attachments = await req.prisma.attachment.findMany({
+      where: {
+        entity_type: 'PAYMENT',
+        entity_id: { in: paymentIds }
+      }
+    });
+
+    // Group attachments by payment_id
+    const attachmentMap = {};
+    attachments.forEach(att => {
+      if (!attachmentMap[att.entity_id]) attachmentMap[att.entity_id] = [];
+      attachmentMap[att.entity_id].push(att);
+    });
+
+    // Add images to each payment
+    const paymentsWithImages = payments.map(p => ({
+      ...p,
+      images: attachmentMap[p.payment_id] || []
+    }));
+
     res.json({
       success: true,
-      data: payments,
+      data: paymentsWithImages,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -105,8 +127,9 @@ router.get('/salary-balance/:employee_no/:year/:month', async (req, res) => {
 // Get single payment with related data
 router.get('/:id', async (req, res) => {
   try {
+    const paymentId = parseInt(req.params.id);
     const payment = await req.prisma.payment.findUnique({
-      where: { payment_id: parseInt(req.params.id) },
+      where: { payment_id: paymentId },
       include: {
         bank: true,
         supplier: true,
@@ -121,7 +144,15 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    res.json({ success: true, data: payment });
+    // Fetch attachments
+    const attachments = await req.prisma.attachment.findMany({
+      where: {
+        entity_type: 'PAYMENT',
+        entity_id: paymentId
+      }
+    });
+
+    res.json({ success: true, data: { ...payment, images: attachments } });
   } catch (error) {
     console.error('Get payment error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch payment' });
@@ -156,7 +187,8 @@ router.post('/',
         salary_type,
         cheque_no,
         cheque_date,
-        remarks
+        remarks,
+        images
       } = req.body;
 
       const payment = await req.prisma.payment.create({
@@ -187,6 +219,21 @@ router.post('/',
         }
       });
 
+      // Save attachments
+      if (images && images.length > 0) {
+        await req.prisma.attachment.createMany({
+          data: images.map(img => ({
+            entity_type: 'PAYMENT',
+            entity_id: payment.payment_id,
+            file_path: img.file_path,
+            original_name: img.original_name,
+            mime_type: img.mime_type,
+            file_size: img.file_size,
+            created_by: req.user.username
+          }))
+        });
+      }
+
       res.status(201).json({
         success: true,
         data: payment,
@@ -213,6 +260,7 @@ router.put('/:id',
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
+      const paymentId = parseInt(req.params.id);
       const {
         payment_amount,
         payment_mode,
@@ -227,11 +275,12 @@ router.put('/:id',
         salary_type,
         cheque_no,
         cheque_date,
-        remarks
+        remarks,
+        images
       } = req.body;
 
       const payment = await req.prisma.payment.update({
-        where: { payment_id: parseInt(req.params.id) },
+        where: { payment_id: paymentId },
         data: {
           payment_amount: parseFloat(payment_amount),
           payment_mode,
@@ -258,6 +307,32 @@ router.put('/:id',
         }
       });
 
+      // Update attachments - delete old ones and insert new ones
+      if (images !== undefined) {
+        // Delete existing attachments
+        await req.prisma.attachment.deleteMany({
+          where: {
+            entity_type: 'PAYMENT',
+            entity_id: paymentId
+          }
+        });
+
+        // Insert new attachments
+        if (images && images.length > 0) {
+          await req.prisma.attachment.createMany({
+            data: images.map(img => ({
+              entity_type: 'PAYMENT',
+              entity_id: paymentId,
+              file_path: img.file_path,
+              original_name: img.original_name,
+              mime_type: img.mime_type,
+              file_size: img.file_size,
+              created_by: req.user.username
+            }))
+          });
+        }
+      }
+
       res.json({
         success: true,
         data: payment,
@@ -273,8 +348,18 @@ router.put('/:id',
 // Delete payment
 router.delete('/:id', async (req, res) => {
   try {
+    const paymentId = parseInt(req.params.id);
+
+    // Delete attachments first
+    await req.prisma.attachment.deleteMany({
+      where: {
+        entity_type: 'PAYMENT',
+        entity_id: paymentId
+      }
+    });
+
     await req.prisma.payment.delete({
-      where: { payment_id: parseInt(req.params.id) }
+      where: { payment_id: paymentId }
     });
 
     res.json({ success: true, message: 'Payment deleted successfully' });

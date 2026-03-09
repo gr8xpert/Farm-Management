@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, FileText, Paperclip } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import DataTable from '../components/Common/DataTable'
 import FormModal from '../components/Common/FormModal'
 import DeleteConfirm from '../components/Common/DeleteConfirm'
+import ImageUploader from '../components/Common/ImageUploader'
 
 const columns = [
   { key: 'payment_id', label: 'ID' },
@@ -29,6 +30,12 @@ const columns = [
   { key: 'employee', label: 'Employee', render: (val) => val?.employee_name || '-' },
   { key: 'salary_type', label: 'Salary Type', render: (val) => val || '-' },
   { key: 'cheque_no', label: 'Cheque No' },
+  { key: 'images', label: 'Files', render: (val) => val?.length > 0 ? (
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded">
+      <Paperclip className="w-3 h-3" />
+      {val.length}
+    </span>
+  ) : '-' },
   { key: 'remarks', label: 'Remarks' },
 ]
 
@@ -46,7 +53,8 @@ const initialFormData = {
   salary_type: 'REGULAR',
   cheque_no: '',
   cheque_date: '',
-  remarks: ''
+  remarks: '',
+  images: []
 }
 
 export default function Payments() {
@@ -68,6 +76,7 @@ export default function Payments() {
   const [sales, setSales] = useState([])
   const [employees, setEmployees] = useState([])
   const [salaryBalance, setSalaryBalance] = useState(null)
+  const [viewingPayment, setViewingPayment] = useState(null)
 
   useEffect(() => {
     fetchPayments()
@@ -132,7 +141,8 @@ export default function Payments() {
         sale_id: formData.sale_id || null,
         employee_no: formData.employee_no || null,
         salary_month: formData.salary_month || null,
-        salary_type: formData.payment_type === 'SALARY' ? formData.salary_type : null
+        salary_type: formData.payment_type === 'SALARY' ? formData.salary_type : null,
+        images: formData.images || []
       }
 
       if (editingId) {
@@ -166,7 +176,8 @@ export default function Payments() {
       salary_type: payment.salary_type || 'REGULAR',
       cheque_no: payment.cheque_no || '',
       cheque_date: payment.cheque_date ? payment.cheque_date.split('T')[0] : '',
-      remarks: payment.remarks || ''
+      remarks: payment.remarks || '',
+      images: payment.images || []
     })
     setEditingId(payment.payment_id)
     setSalaryBalance(null)
@@ -248,6 +259,45 @@ export default function Payments() {
     ? sales.filter(s => s.customer_id === parseInt(formData.customer_id))
     : sales
 
+  const handleView = (payment) => {
+    setViewingPayment(payment)
+  }
+
+  const isPdf = (img) => {
+    return img.mime_type === 'application/pdf' || img.original_name?.endsWith('.pdf')
+  }
+
+  const renderImageThumbnails = (images) => {
+    if (!images || images.length === 0) return <span className="text-gray-400">No attachments</span>
+    return (
+      <div className="flex flex-wrap gap-2">
+        {images.map((img) => (
+          <a
+            key={img.id || img.file_path}
+            href={`/uploads/${img.file_path}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-20 h-20 rounded border border-gray-200 overflow-hidden bg-gray-50 hover:border-green-400 transition-colors"
+            title={img.original_name}
+          >
+            {isPdf(img) ? (
+              <span className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                <FileText className="w-6 h-6" />
+                <span className="text-[9px] mt-1">PDF</span>
+              </span>
+            ) : (
+              <img
+                src={`/uploads/${img.file_path}`}
+                alt={img.original_name}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </a>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -267,6 +317,7 @@ export default function Payments() {
           data={payments}
           pagination={pagination}
           onPageChange={fetchPayments}
+          onView={handleView}
           onEdit={handleEdit}
           onDelete={(item) => { setDeletingItem(item); setDeleteOpen(true) }}
           loading={loading}
@@ -543,8 +594,70 @@ export default function Payments() {
               rows={2}
             />
           </div>
+
+          <div>
+            <ImageUploader
+              images={formData.images}
+              onChange={(imgs) => setFormData({ ...formData, images: imgs })}
+              maxImages={5}
+              label="Attachments"
+            />
+          </div>
         </div>
       </FormModal>
+
+      {/* View Modal */}
+      {viewingPayment && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setViewingPayment(null)}
+            />
+            <div className="relative w-full max-w-lg modal-content animate-fadeIn">
+              <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-800">Payment #{viewingPayment.payment_id}</h3>
+                <button
+                  onClick={() => setViewingPayment(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-gray-500">Date:</span> <span className="text-gray-800">{new Date(viewingPayment.payment_date).toLocaleDateString()}</span></div>
+                  <div><span className="text-gray-500">Type:</span> <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                    viewingPayment.payment_type === 'PAYMENT' ? 'bg-red-100 text-red-700' :
+                    viewingPayment.payment_type === 'RECEIPT' ? 'bg-green-100 text-green-700' :
+                    viewingPayment.payment_type === 'SALARY' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                  }`}>{viewingPayment.payment_type}</span></div>
+                  <div><span className="text-gray-500">Amount:</span> <span className="text-gray-800 font-medium">Rs.{parseFloat(viewingPayment.payment_amount).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                  <div><span className="text-gray-500">Mode:</span> <span className="text-gray-800">{viewingPayment.payment_mode?.replace('_', ' ')}</span></div>
+                  {viewingPayment.bank && <div><span className="text-gray-500">Bank:</span> <span className="text-gray-800">{viewingPayment.bank.bank_name}</span></div>}
+                  {viewingPayment.supplier && <div><span className="text-gray-500">Supplier:</span> <span className="text-gray-800">{viewingPayment.supplier.supplier_name}</span></div>}
+                  {viewingPayment.customer && <div><span className="text-gray-500">Customer:</span> <span className="text-gray-800">{viewingPayment.customer.customer_name}</span></div>}
+                  {viewingPayment.employee && <div><span className="text-gray-500">Employee:</span> <span className="text-gray-800">{viewingPayment.employee.employee_name}</span></div>}
+                  {viewingPayment.purchase && <div><span className="text-gray-500">PO #:</span> <span className="text-gray-800">#{viewingPayment.purchase.po_no}</span></div>}
+                  {viewingPayment.sale && <div><span className="text-gray-500">Sale #:</span> <span className="text-gray-800">#{viewingPayment.sale.sale_id}</span></div>}
+                  {viewingPayment.cheque_no && <div><span className="text-gray-500">Cheque:</span> <span className="text-gray-800">{viewingPayment.cheque_no}</span></div>}
+                  {viewingPayment.salary_type && <div><span className="text-gray-500">Salary Type:</span> <span className="text-gray-800">{viewingPayment.salary_type}</span></div>}
+                </div>
+                {viewingPayment.remarks && (
+                  <div className="text-sm">
+                    <span className="text-gray-500">Remarks:</span>
+                    <p className="text-gray-800 mt-1">{viewingPayment.remarks}</p>
+                  </div>
+                )}
+                <div className="border-t border-gray-100 pt-4">
+                  <h4 className="font-medium text-gray-700 mb-3 text-sm">Attachments</h4>
+                  {renderImageThumbnails(viewingPayment.images)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DeleteConfirm
         isOpen={deleteOpen}
