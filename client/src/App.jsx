@@ -23,6 +23,7 @@ import PurchaseReturnForm from './pages/PurchaseReturnForm'
 import SaleReturns from './pages/SaleReturns'
 import SaleReturnForm from './pages/SaleReturnForm'
 import Settings from './pages/Settings'
+import Users from './pages/Users'
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
             <Route path="sale-returns" element={<SaleReturns />} />
             <Route path="sale-returns/new" element={<SaleReturnForm />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="users" element={<Users />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

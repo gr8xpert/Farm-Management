@@ -14,7 +14,8 @@ import {
   Settings,
   X,
   Scale,
-  MapPin
+  MapPin,
+  ShieldCheck
 } from 'lucide-react'
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Purchase Returns', href: '/purchase-returns', icon: RotateCcw },
   { name: 'Sale Returns', href: '/sale-returns', icon: RotateCcw },
+  { name: 'Users', href: '/users', icon: ShieldCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 

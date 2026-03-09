@@ -6,67 +6,13 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Register
-router.post('/register',
-  [
-    body('username').trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
-    body('email').isEmail().withMessage('Invalid email address'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
-      }
-
-      const { username, email, password, role = 'STAFF' } = req.body;
-
-      // Check if user exists
-      const existingUser = await req.prisma.user.findFirst({
-        where: {
-          OR: [{ username }, { email }]
-        }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Username or email already exists'
-        });
-      }
-
-      // Hash password
-      const password_hash = await bcrypt.hash(password, 10);
-
-      // Create user
-      const user = await req.prisma.user.create({
-        data: {
-          username,
-          email,
-          password_hash,
-          role: role.toUpperCase()
-        },
-        select: {
-          user_id: true,
-          username: true,
-          email: true,
-          role: true,
-          created_on: true
-        }
-      });
-
-      res.status(201).json({
-        success: true,
-        data: user,
-        message: 'User registered successfully'
-      });
-    } catch (error) {
-      console.error('Register error:', error);
-      res.status(500).json({ success: false, message: 'Registration failed' });
-    }
-  }
-);
+// Register - DISABLED (use /api/users for admin user management)
+router.post('/register', (req, res) => {
+  res.status(403).json({
+    success: false,
+    message: 'Public registration is disabled. Contact admin to create an account.'
+  });
+});
 
 // Login
 router.post('/login',

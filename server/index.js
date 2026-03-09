@@ -2,6 +2,8 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
 
 const authRoutes = require('./routes/auth.routes');
@@ -20,14 +22,34 @@ const purchaseReturnRoutes = require('./routes/purchase-return.routes');
 const saleReturnRoutes = require('./routes/sale-return.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable CSP for SPA
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || true, // Allow all in dev, set FRONTEND_URL in production
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Rate limiting for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { success: false, message: 'Too many login attempts, please try again later' }
+});
+
+app.use(express.json({ limit: '10mb' }));
 
 // Make prisma available in routes
 app.use((req, res, next) => {
@@ -36,7 +58,7 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/items', itemRoutes);
@@ -52,6 +74,7 @@ app.use('/api/purchase-returns', purchaseReturnRoutes);
 app.use('/api/sale-returns', saleReturnRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
