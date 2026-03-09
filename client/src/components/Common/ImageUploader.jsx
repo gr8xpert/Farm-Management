@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react'
-import { Plus, X, Loader2, FileText } from 'lucide-react'
+import { Plus, X, Loader2, FileText, Maximize2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
+import ImageLightbox from './ImageLightbox'
 
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/gif,image/webp,application/pdf'
 
 export default function ImageUploader({ images = [], onChange, maxImages = 5, label = 'Attachments' }) {
   const [uploading, setUploading] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(null)
   const fileInputRef = useRef(null)
 
   const handleFileSelect = async (e) => {
@@ -73,25 +75,33 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5, la
             className="relative group w-20 h-20 rounded border border-gray-200 overflow-hidden bg-gray-50"
           >
             {isPdf(img) ? (
-              <a
-                href={getImageUrl(img)}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(index)}
                 className="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-gray-600"
                 title={img.original_name}
               >
                 <FileText className="w-6 h-6" />
                 <span className="text-[9px] mt-1 truncate max-w-[70px] text-center">PDF</span>
-              </a>
+              </button>
             ) : (
-              <a href={getImageUrl(img)} target="_blank" rel="noopener noreferrer">
+              <button type="button" onClick={() => setLightboxIndex(index)} className="w-full h-full">
                 <img
                   src={getImageUrl(img)}
                   alt={img.original_name}
                   className="w-full h-full object-cover"
                 />
-              </a>
+              </button>
             )}
+            {/* Preview button */}
+            <button
+              type="button"
+              onClick={() => setLightboxIndex(index)}
+              className="absolute bottom-0.5 left-0.5 w-5 h-5 bg-black/50 text-white rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Preview"
+            >
+              <Maximize2 className="w-3 h-3" />
+            </button>
             <button
               type="button"
               onClick={() => handleRemove(index)}
@@ -129,6 +139,15 @@ export default function ImageUploader({ images = [], onChange, maxImages = 5, la
         onChange={handleFileSelect}
         className="hidden"
       />
+
+      {/* Lightbox */}
+      {lightboxIndex !== null && images.length > 0 && (
+        <ImageLightbox
+          images={images}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   )
 }

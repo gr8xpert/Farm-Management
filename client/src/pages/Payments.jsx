@@ -638,8 +638,28 @@ export default function Payments() {
                   {viewingPayment.supplier && <div><span className="text-gray-500">Supplier:</span> <span className="text-gray-800">{viewingPayment.supplier.supplier_name}</span></div>}
                   {viewingPayment.customer && <div><span className="text-gray-500">Customer:</span> <span className="text-gray-800">{viewingPayment.customer.customer_name}</span></div>}
                   {viewingPayment.employee && <div><span className="text-gray-500">Employee:</span> <span className="text-gray-800">{viewingPayment.employee.employee_name}</span></div>}
-                  {viewingPayment.purchase && <div><span className="text-gray-500">PO #:</span> <span className="text-gray-800">#{viewingPayment.purchase.po_no}</span></div>}
-                  {viewingPayment.sale && <div><span className="text-gray-500">Sale #:</span> <span className="text-gray-800">#{viewingPayment.sale.sale_id}</span></div>}
+                  {viewingPayment.purchase && (
+                    <div className="col-span-2 mt-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                      <span className="text-indigo-600 font-medium text-xs uppercase">Linked Purchase</span>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-indigo-500">PO #:</span> <span className="text-indigo-800 font-medium">#{viewingPayment.purchase.po_no}</span></div>
+                        <div><span className="text-indigo-500">Date:</span> <span className="text-indigo-800">{new Date(viewingPayment.purchase.po_date).toLocaleDateString()}</span></div>
+                        <div><span className="text-indigo-500">Total Amount:</span> <span className="text-indigo-800 font-medium">Rs.{parseFloat(viewingPayment.purchase.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                        {viewingPayment.purchase.remarks && <div><span className="text-indigo-500">Remarks:</span> <span className="text-indigo-800">{viewingPayment.purchase.remarks}</span></div>}
+                      </div>
+                    </div>
+                  )}
+                  {viewingPayment.sale && (
+                    <div className="col-span-2 mt-2 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <span className="text-emerald-600 font-medium text-xs uppercase">Linked Sale</span>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-emerald-500">Sale #:</span> <span className="text-emerald-800 font-medium">#{viewingPayment.sale.sale_id}</span></div>
+                        <div><span className="text-emerald-500">Date:</span> <span className="text-emerald-800">{new Date(viewingPayment.sale.sale_date).toLocaleDateString()}</span></div>
+                        <div><span className="text-emerald-500">Total Amount:</span> <span className="text-emerald-800 font-medium">Rs.{parseFloat(viewingPayment.sale.total_amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span></div>
+                        {viewingPayment.sale.remarks && <div><span className="text-emerald-500">Remarks:</span> <span className="text-emerald-800">{viewingPayment.sale.remarks}</span></div>}
+                      </div>
+                    </div>
+                  )}
                   {viewingPayment.cheque_no && <div><span className="text-gray-500">Cheque:</span> <span className="text-gray-800">{viewingPayment.cheque_no}</span></div>}
                   {viewingPayment.salary_type && <div><span className="text-gray-500">Salary Type:</span> <span className="text-gray-800">{viewingPayment.salary_type}</span></div>}
                 </div>

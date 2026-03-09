@@ -24,6 +24,12 @@ import SaleReturns from './pages/SaleReturns'
 import SaleReturnForm from './pages/SaleReturnForm'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
+import SalesReport from './pages/Reports/SalesReport'
+import PurchaseReport from './pages/Reports/PurchaseReport'
+import StockReport from './pages/Reports/StockReport'
+import ProfitLossReport from './pages/Reports/ProfitLossReport'
+import PaymentReport from './pages/Reports/PaymentReport'
+import OutstandingReport from './pages/Reports/OutstandingReport'
 
 function App() {
   return (
@@ -61,6 +67,12 @@ function App() {
             <Route path="sale-returns/new" element={<SaleReturnForm />} />
             <Route path="settings" element={<Settings />} />
             <Route path="users" element={<Users />} />
+            <Route path="reports/sales" element={<SalesReport />} />
+            <Route path="reports/purchases" element={<PurchaseReport />} />
+            <Route path="reports/stock" element={<StockReport />} />
+            <Route path="reports/profit-loss" element={<ProfitLossReport />} />
+            <Route path="reports/payments" element={<PaymentReport />} />
+            <Route path="reports/outstanding" element={<OutstandingReport />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

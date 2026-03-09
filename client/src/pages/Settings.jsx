@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Loader2, User, Lock } from 'lucide-react'
+import { Loader2, User, Lock, Database, Download, HardDrive, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,9 @@ export default function Settings() {
     new_password: '',
     confirm_password: ''
   })
+  const [backupStats, setBackupStats] = useState(null)
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -24,7 +27,42 @@ export default function Settings() {
         email: user.email || ''
       })
     }
+    fetchBackupStats()
   }, [user])
+
+  const fetchBackupStats = async () => {
+    setBackupLoading(true)
+    try {
+      const res = await api.get('/backup/stats')
+      if (res.data.success) {
+        setBackupStats(res.data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch backup stats')
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const handleExportBackup = async () => {
+    setExportLoading(true)
+    try {
+      const res = await api.get('/backup/export', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `farm-backup-${new Date().toISOString().split('T')[0]}.json`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Backup exported successfully')
+    } catch (error) {
+      toast.error('Failed to export backup')
+    } finally {
+      setExportLoading(false)
+    }
+  }
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault()
@@ -174,6 +212,74 @@ export default function Settings() {
               Change Password
             </button>
           </form>
+        </div>
+      </div>
+
+      {/* Data Backup */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <Database className="w-5 h-5 text-green-600" />
+          <h2 className="text-sm font-semibold text-gray-700">Data Backup</h2>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-4">
+          Export all your data as a JSON backup file. This includes suppliers, customers, items, purchases, sales, payments, and returns.
+        </p>
+
+        {backupLoading ? (
+          <div className="flex items-center gap-2 text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Loading backup info...</span>
+          </div>
+        ) : backupStats && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <HardDrive className="w-4 h-4 text-gray-400" />
+                <span className="text-xs text-gray-500">Total Records</span>
+              </div>
+              <p className="text-lg font-semibold text-gray-800">{backupStats.totalRecords?.toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <span className="text-xs text-blue-600">Suppliers</span>
+              <p className="text-lg font-semibold text-blue-800">{backupStats.suppliers}</p>
+            </div>
+            <div className="p-3 bg-green-50 rounded-lg">
+              <span className="text-xs text-green-600">Customers</span>
+              <p className="text-lg font-semibold text-green-800">{backupStats.customers}</p>
+            </div>
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <span className="text-xs text-purple-600">Items</span>
+              <p className="text-lg font-semibold text-purple-800">{backupStats.items}</p>
+            </div>
+            <div className="p-3 bg-indigo-50 rounded-lg">
+              <span className="text-xs text-indigo-600">Purchases</span>
+              <p className="text-lg font-semibold text-indigo-800">{backupStats.purchases}</p>
+            </div>
+            <div className="p-3 bg-emerald-50 rounded-lg">
+              <span className="text-xs text-emerald-600">Sales</span>
+              <p className="text-lg font-semibold text-emerald-800">{backupStats.sales}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportBackup}
+            disabled={exportLoading}
+            className="btn-primary text-sm flex items-center gap-2"
+          >
+            {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Export Backup
+          </button>
+          <button
+            onClick={fetchBackupStats}
+            disabled={backupLoading}
+            className="btn-secondary text-sm flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${backupLoading ? 'animate-spin' : ''}`} />
+            Refresh Stats
+          </button>
         </div>
       </div>
     </div>

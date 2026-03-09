@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
 import {
   LayoutDashboard,
   Truck,
@@ -15,7 +16,12 @@ import {
   X,
   Scale,
   MapPin,
-  ShieldCheck
+  ShieldCheck,
+  FileBarChart,
+  ChevronDown,
+  ChevronRight,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react'
 
 const navigation = [
@@ -33,11 +39,25 @@ const navigation = [
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Purchase Returns', href: '/purchase-returns', icon: RotateCcw },
   { name: 'Sale Returns', href: '/sale-returns', icon: RotateCcw },
+]
+
+const reportNavigation = [
+  { name: 'Sales Report', href: '/reports/sales', icon: DollarSign },
+  { name: 'Purchase Report', href: '/reports/purchases', icon: ShoppingCart },
+  { name: 'Stock Report', href: '/reports/stock', icon: Package },
+  { name: 'Profit & Loss', href: '/reports/profit-loss', icon: TrendingUp },
+  { name: 'Payment Report', href: '/reports/payments', icon: CreditCard },
+  { name: 'Outstanding', href: '/reports/outstanding', icon: AlertCircle },
+]
+
+const adminNavigation = [
   { name: 'Users', href: '/users', icon: ShieldCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export default function Sidebar({ open, onClose }) {
+  const [reportsOpen, setReportsOpen] = useState(false)
+
   return (
     <aside
       className={`
@@ -85,6 +105,58 @@ export default function Sidebar({ open, onClose }) {
             <span className="text-sm">{item.name}</span>
           </NavLink>
         ))}
+
+        {/* Reports Section */}
+        <div className="pt-2">
+          <button
+            onClick={() => setReportsOpen(!reportsOpen)}
+            className="sidebar-link w-full justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <FileBarChart className="w-4 h-4" />
+              <span className="text-sm">Reports</span>
+            </div>
+            {reportsOpen ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+          {reportsOpen && (
+            <div className="ml-4 mt-1 space-y-0.5">
+              {reportNavigation.map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `sidebar-link ${isActive ? 'active' : ''}`
+                  }
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm">{item.name}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Admin Section */}
+        <div className="pt-2 border-t border-gray-100 mt-2">
+          {adminNavigation.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
+            >
+              <item.icon className="w-4 h-4" />
+              <span className="text-sm">{item.name}</span>
+            </NavLink>
+          ))}
+        </div>
       </nav>
     </aside>
   )

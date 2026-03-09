@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import ChatWidget from '../Common/ChatWidget'
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -26,6 +27,9 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* AI Chat Widget */}
+      <ChatWidget />
     </div>
   )
 }

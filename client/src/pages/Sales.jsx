@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, FileText } from 'lucide-react'
+import { Plus, Search, FileText, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import DataTable from '../components/Common/DataTable'
 import DeleteConfirm from '../components/Common/DeleteConfirm'
+import InvoiceModal from '../components/Invoice/InvoiceModal'
+import ImageLightbox from '../components/Common/ImageLightbox'
 
 export default function Sales() {
   const navigate = useNavigate()
@@ -17,6 +19,9 @@ export default function Sales() {
   const [submitting, setSubmitting] = useState(false)
   const [viewingSale, setViewingSale] = useState(null)
   const [viewLoading, setViewLoading] = useState(false)
+  const [invoiceSaleId, setInvoiceSaleId] = useState(null)
+  const [lightboxImages, setLightboxImages] = useState([])
+  const [lightboxIndex, setLightboxIndex] = useState(null)
 
   const columns = [
     { key: 'sale_id', label: 'Sale #' },
@@ -66,18 +71,22 @@ export default function Sales() {
     return img.mime_type === 'application/pdf' || img.original_name?.endsWith('.pdf')
   }
 
+  const openLightbox = (images, index) => {
+    setLightboxImages(images)
+    setLightboxIndex(index)
+  }
+
   const renderImageThumbnails = (images, label) => {
     if (!images || images.length === 0) return null
     return (
       <div className="mt-2">
         <span className="text-xs text-gray-500">{label}</span>
         <div className="flex flex-wrap gap-2 mt-1">
-          {images.map((img) => (
-            <a
+          {images.map((img, idx) => (
+            <button
               key={img.id || img.file_path}
-              href={`/uploads/${img.file_path}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
+              onClick={() => openLightbox(images, idx)}
               className="block w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 hover:border-green-400 transition-colors"
               title={img.original_name}
             >
@@ -93,7 +102,7 @@ export default function Sales() {
                   className="w-full h-full object-cover"
                 />
               )}
-            </a>
+            </button>
           ))}
         </div>
       </div>
@@ -150,12 +159,21 @@ export default function Sales() {
             <div className="relative w-full max-w-2xl modal-content animate-fadeIn">
               <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-800">Sale #{viewingSale.sale_id}</h3>
-                <button
-                  onClick={() => setViewingSale(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-                >
-                  x
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setInvoiceSaleId(viewingSale.sale_id); setViewingSale(null) }}
+                    className="btn-primary text-sm flex items-center gap-2"
+                  >
+                    <Receipt className="w-4 h-4" />
+                    Invoice
+                  </button>
+                  <button
+                    onClick={() => setViewingSale(null)}
+                    className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  >
+                    x
+                  </button>
+                </div>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -214,6 +232,23 @@ export default function Sales() {
         message={`Delete Sale #${deletingItem?.sale_id}? This cannot be undone.`}
         loading={submitting}
       />
+
+      {/* Invoice Modal */}
+      {invoiceSaleId && (
+        <InvoiceModal
+          saleId={invoiceSaleId}
+          onClose={() => setInvoiceSaleId(null)}
+        />
+      )}
+
+      {/* Image Lightbox */}
+      {lightboxIndex !== null && lightboxImages.length > 0 && (
+        <ImageLightbox
+          images={lightboxImages}
+          initialIndex={lightboxIndex}
+          onClose={() => { setLightboxIndex(null); setLightboxImages([]) }}
+        />
+      )}
     </div>
   )
 }

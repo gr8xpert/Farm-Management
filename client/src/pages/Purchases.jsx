@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import api from '../services/api'
 import DataTable from '../components/Common/DataTable'
 import DeleteConfirm from '../components/Common/DeleteConfirm'
+import ImageLightbox from '../components/Common/ImageLightbox'
 
 export default function Purchases() {
   const navigate = useNavigate()
@@ -17,6 +18,8 @@ export default function Purchases() {
   const [submitting, setSubmitting] = useState(false)
   const [viewingPurchase, setViewingPurchase] = useState(null)
   const [viewLoading, setViewLoading] = useState(false)
+  const [lightboxImages, setLightboxImages] = useState([])
+  const [lightboxIndex, setLightboxIndex] = useState(null)
 
   const columns = [
     { key: 'po_no', label: 'PO #' },
@@ -66,18 +69,22 @@ export default function Purchases() {
     return img.mime_type === 'application/pdf' || img.original_name?.endsWith('.pdf')
   }
 
+  const openLightbox = (images, index) => {
+    setLightboxImages(images)
+    setLightboxIndex(index)
+  }
+
   const renderImageThumbnails = (images, label) => {
     if (!images || images.length === 0) return null
     return (
       <div className="mt-2">
         <span className="text-xs text-gray-500">{label}</span>
         <div className="flex flex-wrap gap-2 mt-1">
-          {images.map((img) => (
-            <a
+          {images.map((img, idx) => (
+            <button
               key={img.id || img.file_path}
-              href={`/uploads/${img.file_path}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
+              onClick={() => openLightbox(images, idx)}
               className="block w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 hover:border-green-400 transition-colors"
               title={img.original_name}
             >
@@ -93,7 +100,7 @@ export default function Purchases() {
                   className="w-full h-full object-cover"
                 />
               )}
-            </a>
+            </button>
           ))}
         </div>
       </div>
@@ -216,6 +223,15 @@ export default function Purchases() {
         message={`Delete PO #${deletingItem?.po_no}? This cannot be undone.`}
         loading={submitting}
       />
+
+      {/* Image Lightbox */}
+      {lightboxIndex !== null && lightboxImages.length > 0 && (
+        <ImageLightbox
+          images={lightboxImages}
+          initialIndex={lightboxIndex}
+          onClose={() => { setLightboxIndex(null); setLightboxImages([]) }}
+        />
+      )}
     </div>
   )
 }

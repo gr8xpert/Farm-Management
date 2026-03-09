@@ -23,6 +23,9 @@ const saleReturnRoutes = require('./routes/sale-return.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const userRoutes = require('./routes/user.routes');
+const reportRoutes = require('./routes/report.routes');
+const aiRoutes = require('./routes/ai.routes');
+const backupRoutes = require('./routes/backup.routes');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -31,12 +34,12 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false
+  contentSecurityPolicy: false // Disable CSP for SPA
 }));
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
+  origin: process.env.FRONTEND_URL || true, // Allow all in dev, set FRONTEND_URL in production
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -44,8 +47,8 @@ app.use(cors({
 
 // Rate limiting for auth routes
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
   message: { success: false, message: 'Too many login attempts, please try again later' }
 });
 
@@ -75,6 +78,9 @@ app.use('/api/sale-returns', saleReturnRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
